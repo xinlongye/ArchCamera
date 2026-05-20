@@ -8,7 +8,10 @@ include_directories(${CMAKE_CURRENT_LIST_DIR}/include)
 
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
-        native-lib.cpp)
+        native-lib.cpp
+        preview_renderer.cpp
+        preview_jni.cpp
+        yuv_to_nv21.cpp)
 
 add_library(opencv SHARED IMPORTED)
 set_target_properties(

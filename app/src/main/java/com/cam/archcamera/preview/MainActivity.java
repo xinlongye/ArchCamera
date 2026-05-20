@@ -28,6 +28,8 @@ import com.bumptech.glide.Glide;
 import com.cam.archcamera.R;
 import com.cam.archcamera.camera.AspectResolutionSelector;
 import com.cam.archcamera.camera.Camera2Enum;
+import com.cam.archcamera.camera.Camera2PreviewController;
+import com.cam.archcamera.camera.PreviewStreamSizeResolver;
 import com.cam.archcamera.databinding.ActivityMainBinding;
 import com.cam.archcamera.databinding.ItemAaaRowBinding;
 import com.cam.archcamera.gallery.GalleryActivity;
@@ -61,12 +63,22 @@ public class MainActivity extends AppCompatActivity {
     /** 策略 key 中显示区总像素的量化步长，减轻 1px 抖动导致的 prefs 重算。 */
     private static final long RESOLUTION_POLICY_DISPLAY_PIXEL_BUCKET = 50_000L;
 
+    /** 布局连续变化时合并分辨率策略更新，避免相机反复 open/close。 */
+    private static final long RESOLUTION_POLICY_DEBOUNCE_MS = 150L;
+
     private ActivityMainBinding binding;
+    private final Camera2PreviewController previewController = new Camera2PreviewController();
     private PreviewAspect aspect = PreviewAspect.THREE_FOUR;
     private boolean backCamera = true;
 
     /** 上次已按策略写入 prefs 的 key（摄像头、比例、全屏目标比、显示区像素桶），避免覆盖用户在设置里的手改。 */
     @Nullable private String lastResolutionPolicyKey;
+
+    private final Runnable resolutionPolicyRunnable =
+            () -> applyResolutionSelectionForCurrentState(false);
+
+    /** 合并布局回调，在 layout pass 结束后再改 LayoutParams，避免 requestLayout 警告。 */
+    private final Runnable applyPreviewGeometryRunnable = this::applyPreviewGeometry;
 
     private final ActivityResultLauncher<String> requestReadImages =
             registerForActivityResult(
@@ -76,6 +88,18 @@ public class MainActivity extends AppCompatActivity {
                             refreshGalleryThumbnail();
                         } else {
                             clearGalleryThumbnail();
+                        }
+                    });
+
+    private final ActivityResultLauncher<String> requestCamera =
+            registerForActivityResult(
+                    new ActivityResultContracts.RequestPermission(),
+                    granted -> {
+                        if (granted) {
+                            startPreviewIfReady();
+                        } else {
+                            Toast.makeText(this, R.string.camera_permission_denied, Toast.LENGTH_LONG)
+                                    .show();
                         }
                     });
 
@@ -93,13 +117,13 @@ public class MainActivity extends AppCompatActivity {
 
         binding.cameraStage.addOnLayoutChangeListener(
                 (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
-                    applyPreviewGeometry();
-                    applyResolutionSelectionIfPolicyChanged();
+                    scheduleApplyPreviewGeometry();
+                    scheduleResolutionSelectionIfPolicyChanged();
                 });
 
         binding.topBar.addOnLayoutChangeListener(
                 (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
-                        applyPreviewGeometry());
+                        scheduleApplyPreviewGeometry());
 
         binding.aspectGroup.addOnButtonCheckedListener(this::onAspectChecked);
         binding.modeGroup.addOnButtonCheckedListener(this::onModeChecked);
@@ -123,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
                     backCamera = !backCamera;
                     refreshCameraAndModeUi();
                     applySelectedCameraIdForFacing(backCamera);
-                    applyResolutionSelectionIfPolicyChanged();
+                    scheduleResolutionSelectionIfPolicyChanged();
                     Toast.makeText(
                                     this,
                                     backCamera ? R.string.camera_back : R.string.camera_front,
@@ -131,20 +155,49 @@ public class MainActivity extends AppCompatActivity {
                             .show();
                 });
 
-        syncAspectFromToggle();
+        restoreAspectFromPrefs();
         syncBackCameraFromPrefs();
         refreshCameraAndModeUi();
 
         binding.cameraStage.post(
                 () -> {
                     applyPreviewGeometry();
-                    applyResolutionSelectionIfPolicyChanged();
+                    applyResolutionSelectionForCurrentState(false);
                 });
+
+        binding.previewGl.setPreviewFpsListener(this::onPreviewFpsUpdated);
+    }
+
+    private void onPreviewFpsUpdated(float fps) {
+        binding.previewFpsHudText.setText(
+                getString(R.string.preview_fps_hud_format, fps));
+    }
+
+    private void resetPreviewFpsHud() {
+        binding.previewFpsHudText.setText(R.string.preview_fps_hud_unknown);
+    }
+
+    @Override
+    protected void onPause() {
+        previewController.stop();
+        binding.previewGl.onPause();
+        resetPreviewFpsHud();
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        binding.cameraStage.removeCallbacks(applyPreviewGeometryRunnable);
+        binding.cameraStage.removeCallbacks(resolutionPolicyRunnable);
+        previewController.shutdown();
+        binding.previewGl.release();
+        super.onDestroy();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        binding.previewGl.onResume();
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
                 == PackageManager.PERMISSION_GRANTED) {
             refreshGalleryThumbnail();
@@ -154,7 +207,46 @@ public class MainActivity extends AppCompatActivity {
         }
         syncBackCameraFromPrefs();
         refreshCameraAndModeUi();
-        applyResolutionSelectionIfPolicyChanged();
+        scheduleResolutionSelectionIfPolicyChanged();
+        ensureCameraPermissionAndPreview();
+    }
+
+    private void ensureCameraPermissionAndPreview() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestCamera.launch(Manifest.permission.CAMERA);
+            applyPreviewStreamSizeFromPrefsOnly();
+            return;
+        }
+        // Camera is always stopped in onPause; restart preview after GL surface is resumed.
+        startPreviewIfReady();
+    }
+
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void startPreviewIfReady() {
+        String camId = resolveCameraIdForResolution();
+        if (camId == null) {
+            applyPreviewStreamSizeFromPrefsOnly();
+            return;
+        }
+        Size labelSize =
+                PreviewSizeLabel.parseOrFallback(PhotoSavePrefs.getPreviewSizeLabel(this));
+        Size streamSize = PreviewStreamSizeResolver.resolve(this, camId, labelSize);
+        binding.previewGl.invalidatePreviewFrames();
+        binding.previewGl.setPreviewSize(streamSize.getWidth(), streamSize.getHeight());
+        previewController.start(this, camId, streamSize, binding.previewGl.getFrameSink());
+    }
+
+    /** Updates GL buffers when camera is not running (no permission / no device). */
+    private void applyPreviewStreamSizeFromPrefsOnly() {
+        Size size =
+                PreviewSizeLabel.parseOrFallback(PhotoSavePrefs.getPreviewSizeLabel(this));
+        binding.previewGl.invalidatePreviewFrames();
+        binding.previewGl.setPreviewSize(size.getWidth(), size.getHeight());
     }
 
     /** Writes prefs to the first camera id for BACK / FRONT (system camera id list order). */
@@ -236,17 +328,10 @@ public class MainActivity extends AppCompatActivity {
         if (!isChecked) {
             return;
         }
-        if (checkedId == R.id.aspect_1_1) {
-            aspect = PreviewAspect.ONE_ONE;
-        } else if (checkedId == R.id.aspect_3_4) {
-            aspect = PreviewAspect.THREE_FOUR;
-        } else if (checkedId == R.id.aspect_9_16) {
-            aspect = PreviewAspect.NINE_SIXTEEN;
-        } else if (checkedId == R.id.aspect_full) {
-            aspect = PreviewAspect.FULL;
-        }
+        updateAspectFromButtonId(checkedId);
+        PhotoSavePrefs.setPreviewAspect(this, aspect.name());
         applyPreviewGeometry();
-        applyResolutionSelectionIfPolicyChanged();
+        applyResolutionSelectionForCurrentState(true);
     }
 
     private void onModeChecked(com.google.android.material.button.MaterialButtonToggleGroup group, int checkedId, boolean isChecked) {
@@ -276,17 +361,51 @@ public class MainActivity extends AppCompatActivity {
         binding.focalScroll.setVisibility(backCamera ? View.VISIBLE : View.GONE);
     }
 
+    private void restoreAspectFromPrefs() {
+        String saved = PhotoSavePrefs.getPreviewAspect(this);
+        if (saved != null) {
+            int buttonId = aspectButtonIdFromName(saved);
+            if (buttonId != View.NO_ID) {
+                binding.aspectGroup.check(buttonId);
+            }
+        }
+        syncAspectFromToggle();
+    }
+
     private void syncAspectFromToggle() {
-        int id = binding.aspectGroup.getCheckedButtonId();
-        if (id == R.id.aspect_1_1) {
+        updateAspectFromButtonId(binding.aspectGroup.getCheckedButtonId());
+    }
+
+    private void updateAspectFromButtonId(int buttonId) {
+        if (buttonId == R.id.aspect_1_1) {
             aspect = PreviewAspect.ONE_ONE;
-        } else if (id == R.id.aspect_3_4) {
+        } else if (buttonId == R.id.aspect_3_4) {
             aspect = PreviewAspect.THREE_FOUR;
-        } else if (id == R.id.aspect_9_16) {
+        } else if (buttonId == R.id.aspect_9_16) {
             aspect = PreviewAspect.NINE_SIXTEEN;
-        } else if (id == R.id.aspect_full) {
+        } else if (buttonId == R.id.aspect_full) {
             aspect = PreviewAspect.FULL;
         }
+    }
+
+    private static int aspectButtonIdFromName(@NonNull String aspectName) {
+        switch (aspectName) {
+            case "ONE_ONE":
+                return R.id.aspect_1_1;
+            case "THREE_FOUR":
+                return R.id.aspect_3_4;
+            case "NINE_SIXTEEN":
+                return R.id.aspect_9_16;
+            case "FULL":
+                return R.id.aspect_full;
+            default:
+                return View.NO_ID;
+        }
+    }
+
+    private void scheduleApplyPreviewGeometry() {
+        binding.cameraStage.removeCallbacks(applyPreviewGeometryRunnable);
+        binding.cameraStage.post(applyPreviewGeometryRunnable);
     }
 
     private void applyPreviewGeometry() {
@@ -301,13 +420,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) previewHost.getLayoutParams();
-        lp.gravity = Gravity.TOP | Gravity.START;
-
+        int hostGravity = Gravity.TOP | Gravity.START;
+        int displayW;
+        int displayH;
+        int topMargin;
+        int leftMargin;
         if (aspect == PreviewAspect.FULL) {
-            lp.width = W;
-            lp.height = H;
-            lp.topMargin = 0;
-            lp.leftMargin = 0;
+            displayW = PreviewStreamSizeResolver.ensureEvenDimension(W);
+            displayH = PreviewStreamSizeResolver.ensureEvenDimension(H);
+            topMargin = 0;
+            leftMargin = 0;
         } else {
             float ratioLongPerShort;
             if (aspect == PreviewAspect.ONE_ONE) {
@@ -317,40 +439,97 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 ratioLongPerShort = 16f / 9f;
             }
-            int previewH = Math.round(W * ratioLongPerShort);
-            lp.width = W;
-            lp.height = previewH;
-            lp.leftMargin = 0;
+            displayW = PreviewStreamSizeResolver.ensureEvenDimension(W);
+            displayH =
+                    PreviewStreamSizeResolver.ensureEvenDimension(
+                            Math.round(displayW * ratioLongPerShort));
+            leftMargin = 0;
             if (aspect == PreviewAspect.NINE_SIXTEEN) {
-                lp.topMargin = Math.max(0, (H - previewH) / 2);
+                topMargin = Math.max(0, (H - displayH) / 2);
             } else {
-                lp.topMargin = topBarH;
+                topMargin = topBarH;
             }
         }
-
-        previewHost.setLayoutParams(lp);
+        boolean hostUnchanged =
+                lp.width == displayW
+                        && lp.height == displayH
+                        && lp.topMargin == topMargin
+                        && lp.leftMargin == leftMargin
+                        && lp.gravity == hostGravity;
+        if (!hostUnchanged) {
+            lp.gravity = hostGravity;
+            lp.width = displayW;
+            lp.height = displayH;
+            lp.topMargin = topMargin;
+            lp.leftMargin = leftMargin;
+            previewHost.setLayoutParams(lp);
+        }
+        syncPreviewGlDisplaySize(displayW, displayH);
         refreshResolutionHud();
     }
 
+    /** 与预览宿主偶数显示区一致，供 GLES YUV 绘制使用。 */
+    private void syncPreviewGlDisplaySize(int width, int height) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        FrameLayout.LayoutParams glLp =
+                (FrameLayout.LayoutParams) binding.previewGl.getLayoutParams();
+        if (glLp.width == width
+                && glLp.height == height
+                && glLp.gravity == (Gravity.TOP | Gravity.START)
+                && glLp.topMargin == 0
+                && glLp.leftMargin == 0) {
+            return;
+        }
+        glLp.width = width;
+        glLp.height = height;
+        glLp.gravity = Gravity.TOP | Gravity.START;
+        glLp.topMargin = 0;
+        glLp.leftMargin = 0;
+        binding.previewGl.setLayoutParams(glLp);
+    }
+
+    private void scheduleResolutionSelectionIfPolicyChanged() {
+        binding.cameraStage.removeCallbacks(resolutionPolicyRunnable);
+        binding.cameraStage.postDelayed(
+                resolutionPolicyRunnable, RESOLUTION_POLICY_DEBOUNCE_MS);
+    }
+
     /**
-     * 根据当前摄像头 ID、预览比例与预览显示区像素规模，自动挑选预览与拍照分辨率并写入 prefs；
-     * 若策略未变化则不覆盖（保留用户在设置中的手改）。始终在预览区 HUD 显示分辨率与预览显示区尺寸。
+     * 根据当前摄像头 ID、预览比例与预览显示区像素规模，自动挑选预览与拍照分辨率并写入 prefs。
+     *
+     * @param forceFromAspectChange 用户切换比例时为 true，始终重选并写入；布局抖动时为 false，策略未变则保留设置里的手改。
      */
-    private void applyResolutionSelectionIfPolicyChanged() {
+    private void applyResolutionSelectionForCurrentState(boolean forceFromAspectChange) {
         String camId = resolveCameraIdForResolution();
         if (camId == null) {
             lastResolutionPolicyKey = null;
             refreshResolutionHud();
             return;
         }
+        long displayPixels = computePreviewHostDisplayPixelCount();
+        if (displayPixels <= 0L) {
+            refreshResolutionHud();
+            binding.previewHost.post(
+                    () -> applyResolutionSelectionForCurrentState(forceFromAspectChange));
+            return;
+        }
         if (PhotoSavePrefs.getSelectedCameraId(this) == null) {
             PhotoSavePrefs.setSelectedCameraId(this, camId);
         }
         String key = buildResolutionPolicyKey(camId);
-        if (!key.equals(lastResolutionPolicyKey)) {
+        boolean policyChanged = forceFromAspectChange || !key.equals(lastResolutionPolicyKey);
+        String previousPreviewLabel = PhotoSavePrefs.getPreviewSizeLabel(this);
+        Size previousStream =
+                PreviewStreamSizeResolver.resolve(
+                        this,
+                        camId,
+                        PreviewSizeLabel.parseOrFallback(previousPreviewLabel));
+        boolean previewStreamChanged = false;
+        if (policyChanged) {
             lastResolutionPolicyKey = key;
             float target = computeTargetLongPerShortForCurrentAspect();
-            long displayPixels = computePreviewHostDisplayPixelCount();
             Size[] previewSizes = Camera2Enum.getPreviewSizes(this, camId);
             Size[] captureSizes = Camera2Enum.getJpegCaptureSizes(this, camId);
             Size p =
@@ -358,13 +537,26 @@ public class MainActivity extends AppCompatActivity {
                             previewSizes, target, displayPixels);
             Size c = AspectResolutionSelector.pickCaptureForTargetRatio(captureSizes, target);
             if (p != null) {
-                PhotoSavePrefs.setPreviewSizeLabel(this, Camera2Enum.formatSize(p));
+                String label = Camera2Enum.formatSize(p);
+                PhotoSavePrefs.setPreviewSizeLabel(this, label);
+                Size resolved = PreviewStreamSizeResolver.resolve(this, camId, p);
+                previewStreamChanged =
+                        forceFromAspectChange
+                                || !resolved.equals(previousStream)
+                                || !label.equals(previousPreviewLabel);
             }
             if (c != null) {
                 PhotoSavePrefs.setCaptureSizeLabel(this, Camera2Enum.formatSize(c));
             }
         }
         refreshResolutionHud();
+        if (previewStreamChanged) {
+            if (hasCameraPermission()) {
+                startPreviewIfReady();
+            } else {
+                applyPreviewStreamSizeFromPrefsOnly();
+            }
+        }
     }
 
     /**

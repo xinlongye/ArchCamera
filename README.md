@@ -2,6 +2,8 @@
 
 基于 Android Camera2 API 的相机应用，面向多种机型提供兼容的权限申请、预览、拍照、图库与设置能力。
 
+**当前版本：1.1.0**（`versionCode` 2）— 详见 [`CHANGELOG.md`](CHANGELOG.md)
+
 ## 功能概览
 
 | 界面 | 说明 |
@@ -17,16 +19,28 @@
 - **模式**：普通模式自动 3A；专业模式（仅后摄）可手动调节对焦、曝光补偿、ISO、快门、白平衡
 - **焦段**：后摄多摄像头时支持超广/主摄/长焦等切换
 - **布局**：预览层全屏底层绘制，宽度贴齐屏幕，高度随比例变化
+- **预览渲染**（v1.1+）：Camera2 `ImageReader` 采集 YUV → NV21，经 **OpenGL ES 3** 原生着色器在 `GLSurfaceView` 上显示；界面可显示预览帧率
 
 更完整的功能与交互说明见 [`docs/功能描述.md`](docs/功能描述.md)。
 
 ## 技术栈
 
 - **语言**：Java 11
-- **相机**：Camera2
+- **相机**：Camera2（预览 ImageReader + 拍照）
 - **UI**：View Binding、Material、ConstraintLayout
-- **原生**：CMake + NDK（`armeabi-v7a` / `arm64-v8a`），集成 OpenCV / GLM 头文件（`app/src/main/cpp`）
+- **原生**：CMake + NDK（`armeabi-v7a` / `arm64-v8a`），OpenGL ES 3 预览渲染，集成 OpenCV / GLM 头文件（`app/src/main/cpp`）
 - **其他**：Glide（图库缩略图）、ExifInterface（元数据）
+
+## 版本管理
+
+应用版本在仓库根目录 **`version.properties`** 中集中维护：
+
+```properties
+VERSION_CODE=2
+VERSION_NAME=1.1.0
+```
+
+`app/build.gradle` 读取该文件作为 `versionCode` / `versionName`。发版时请同时更新 `CHANGELOG.md`。
 
 ## 环境要求
 
@@ -51,12 +65,16 @@
 
 ```
 app/src/main/java/com/cam/archcamera/
-├── preview/          # 主界面：预览、拍照、模式与比例
-├── camera/           # Camera2 与分辨率选择
+├── preview/          # 主界面：GL 预览、拍照、模式与比例
+├── camera/           # Camera2、预览控制器、分辨率与 YUV 转换
 ├── gallery/          # 图库
 ├── imageviewer/      # 图片查看与 EXIF
 ├── settings/         # 设置与偏好
 └── util/             # 通用工具
+
+app/src/main/cpp/     # 原生预览渲染、JNI、YUV 工具
+version.properties    # 应用版本号（Gradle 单一来源）
+CHANGELOG.md          # 版本更新记录
 ```
 
 ## 权限

@@ -2,6 +2,12 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+def versionProps = new Properties()
+def versionPropsFile = rootProject.file("version.properties")
+if (versionPropsFile.exists()) {
+    versionPropsFile.withInputStream { versionProps.load(it) }
+}
+
 android {
     namespace 'com.cam.archcamera'
     compileSdk {
@@ -14,8 +20,8 @@ android {
         applicationId "com.cam.archcamera"
         minSdk 34
         targetSdk 36
-        versionCode 1
-        versionName "1.0"
+        versionCode versionProps.getProperty("VERSION_CODE", "1").toInteger()
+        versionName versionProps.getProperty("VERSION_NAME", "1.0")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {

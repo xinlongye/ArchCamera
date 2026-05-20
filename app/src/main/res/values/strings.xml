@@ -40,5 +40,8 @@
     <string name="exif_none">无法读取 EXIF</string>
     <string name="camera_back">后摄</string>
     <string name="camera_front">前摄</string>
+    <string name="camera_permission_denied">需要相机权限才能预览</string>
     <string name="switch_camera">切换前后摄像头</string>
+    <string name="preview_fps_hud_format">预览帧率 %1$.1f fps</string>
+    <string name="preview_fps_hud_unknown">预览帧率 —</string>
 </resources>

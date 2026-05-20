@@ -2,7 +2,6 @@ package com.cam.archcamera.camera;
 
 import android.content.Context;
 import android.graphics.ImageFormat;
-import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -79,7 +78,14 @@ public final class Camera2Enum {
 
     @NonNull
     public static Size[] getPreviewSizes(@NonNull Context context, @NonNull String cameraId) {
-        return getOutputSizesForClass(context, cameraId, SurfaceTexture.class);
+        return getYuv420888OutputSizes(context, cameraId);
+    }
+
+    /** Sizes supported for {@link android.media.ImageReader} preview (YUV_420_888). */
+    @NonNull
+    public static Size[] getYuv420888OutputSizes(
+            @NonNull Context context, @NonNull String cameraId) {
+        return getOutputSizesForFormat(context, cameraId, ImageFormat.YUV_420_888);
     }
 
     @NonNull
@@ -90,30 +96,6 @@ public final class Camera2Enum {
     @NonNull
     public static String formatSize(@NonNull Size size) {
         return size.getWidth() + "×" + size.getHeight();
-    }
-
-    @NonNull
-    private static Size[] getOutputSizesForClass(
-            @NonNull Context context, @NonNull String cameraId, @NonNull Class<?> klass) {
-        CameraManager cm = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-        if (cm == null) {
-            return new Size[0];
-        }
-        try {
-            CameraCharacteristics chars = cm.getCameraCharacteristics(cameraId);
-            android.hardware.camera2.params.StreamConfigurationMap map =
-                    chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            if (map == null) {
-                return new Size[0];
-            }
-            Size[] sizes = map.getOutputSizes(klass);
-            if (sizes == null || sizes.length == 0) {
-                return new Size[0];
-            }
-            return sortedCopyOrEmpty(sizes);
-        } catch (CameraAccessException e) {
-            return new Size[0];
-        }
     }
 
     @NonNull

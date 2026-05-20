@@ -21,6 +21,9 @@ public final class AspectResolutionSelector {
     /** 与最佳长宽比的相对误差容差，用于归并「同等匹配」的候选。 */
     private static final float ASPECT_MATCH_SLACK = 0.02f;
 
+    /** 布局未完成、显示区像素未知时的预览目标（与 {@link com.cam.archcamera.preview.PreviewSizeLabel#fallback()} 一致）。 */
+    private static final long DEFAULT_PREVIEW_PIXELS = 1440L * 1080L;
+
     private AspectResolutionSelector() {}
 
     /** 长边 / 短边，竖屏 UI 下与文档中比例描述一致。 */
@@ -57,26 +60,9 @@ public final class AspectResolutionSelector {
         if (tier == null || tier.isEmpty()) {
             return null;
         }
-        if (targetDisplayPixelCount <= 0L) {
-            return pickLargestArea(tier);
-        }
-        Size chosen = tier.get(0);
-        long chosenArea = area(chosen);
-        long bestGap = Math.abs(chosenArea - targetDisplayPixelCount);
-        for (int i = 1; i < tier.size(); i++) {
-            Size s = tier.get(i);
-            long a = area(s);
-            long gap = Math.abs(a - targetDisplayPixelCount);
-            if (gap < bestGap) {
-                bestGap = gap;
-                chosen = s;
-                chosenArea = a;
-            } else if (gap == bestGap && a > chosenArea) {
-                chosen = s;
-                chosenArea = a;
-            }
-        }
-        return chosen;
+        long targetPixels =
+                targetDisplayPixelCount > 0L ? targetDisplayPixelCount : DEFAULT_PREVIEW_PIXELS;
+        return pickClosestToPixelCount(tier, targetPixels);
     }
 
     @Nullable
@@ -113,6 +99,28 @@ public final class AspectResolutionSelector {
             }
         }
         return tier.isEmpty() ? null : tier;
+    }
+
+    @Nullable
+    private static Size pickClosestToPixelCount(
+            @NonNull List<Size> tier, long targetPixelCount) {
+        Size chosen = tier.get(0);
+        long chosenArea = area(chosen);
+        long bestGap = Math.abs(chosenArea - targetPixelCount);
+        for (int i = 1; i < tier.size(); i++) {
+            Size s = tier.get(i);
+            long a = area(s);
+            long gap = Math.abs(a - targetPixelCount);
+            if (gap < bestGap) {
+                bestGap = gap;
+                chosen = s;
+                chosenArea = a;
+            } else if (gap == bestGap && a < chosenArea) {
+                chosen = s;
+                chosenArea = a;
+            }
+        }
+        return chosen;
     }
 
     @NonNull

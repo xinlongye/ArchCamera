@@ -13,11 +13,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <View
-            android:id="@+id/preview_placeholder"
+        <com.cam.archcamera.preview.PreviewGlSurfaceView
+            android:id="@+id/preview_gl"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/arch_muted" />
+            android:layout_height="match_parent" />
 
         <TextView
             android:id="@+id/preview_label"
@@ -27,7 +26,8 @@
             android:layout_margin="10dp"
             android:text="@string/preview_placeholder_label"
             android:textColor="#73E00A0A"
-            android:textSize="11sp" />
+            android:textSize="11sp"
+            android:visibility="gone" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/resolution_hud"
@@ -42,17 +42,37 @@
             app:strokeColor="#17FFFFFF"
             app:strokeWidth="1dp">
 
-            <TextView
-                android:id="@+id/resolution_hud_text"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:lineSpacingExtra="1dp"
-                android:paddingHorizontal="7dp"
-                android:paddingVertical="6dp"
-                android:textColor="@color/arch_text"
-                android:textSize="9sp"
-                tools:text="预览 1440×1080\n拍照 4096×3072\n显示区 1080×1440 px" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/resolution_hud_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="1dp"
+                    android:paddingHorizontal="7dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="0dp"
+                    android:textColor="@color/arch_text"
+                    android:textSize="9sp"
+                    tools:text="预览 1440×1080\n拍照 4096×3072\n显示区 1080×1440 px" />
+
+                <TextView
+                    android:id="@+id/preview_fps_hud_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:paddingHorizontal="7dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="6dp"
+                    android:text="@string/preview_fps_hud_unknown"
+                    android:textColor="@color/arch_text"
+                    android:textSize="9sp"
+                    tools:text="预览帧率 30.0 fps" />
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </FrameLayout>
 

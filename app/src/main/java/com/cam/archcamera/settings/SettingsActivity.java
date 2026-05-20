@@ -42,6 +42,11 @@ public final class SettingsActivity extends AppCompatActivity {
         setupCameraIdSpinner();
         setupSavePath();
 
+        binding.switchMirrorFront.setChecked(PhotoSavePrefs.getMirrorFrontEnabled(this));
+        binding.switchMirrorFront.setOnCheckedChangeListener(
+                (buttonView, isChecked) ->
+                        PhotoSavePrefs.setMirrorFrontEnabled(SettingsActivity.this, isChecked));
+
         if (!cameraIds.isEmpty()) {
             String id = resolveInitialCameraId();
             PhotoSavePrefs.setSelectedCameraId(this, id);
@@ -65,6 +70,7 @@ public final class SettingsActivity extends AppCompatActivity {
             }
         }
         refreshResolutionSpinners(resolveInitialCameraId());
+        binding.switchMirrorFront.setChecked(PhotoSavePrefs.getMirrorFrontEnabled(this));
     }
 
     private void setupSavePath() {
@@ -190,13 +196,17 @@ public final class SettingsActivity extends AppCompatActivity {
         spinner.setAdapter(adapter);
 
         int idx = findSelectionIndex(labels, savedLabel);
-        spinner.setSelection(idx >= 0 ? idx : 0);
+        int selection = idx >= 0 ? idx : 0;
 
+        final boolean[] ignoreSelectionCallback = {true};
         spinner.setOnItemSelectedListener(
                 new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(
                             AdapterView<?> parent, View view, int position, long id) {
+                        if (ignoreSelectionCallback[0]) {
+                            return;
+                        }
                         onUserChoice.onSelected(labels.get(position));
                     }
 
@@ -204,7 +214,8 @@ public final class SettingsActivity extends AppCompatActivity {
                     public void onNothingSelected(AdapterView<?> parent) {}
                 });
 
-        onUserChoice.onSelected(labels.get(idx >= 0 ? idx : 0));
+        spinner.setSelection(selection);
+        ignoreSelectionCallback[0] = false;
     }
 
     private static int findSelectionIndex(@NonNull List<String> labels, @Nullable String saved) {

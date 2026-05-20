@@ -18,6 +18,9 @@ public final class PhotoSavePrefs {
     private static final String KEY_SELECTED_CAMERA_ID = "selected_camera_id";
     private static final String KEY_PREVIEW_SIZE_LABEL = "preview_size_label";
     private static final String KEY_CAPTURE_SIZE_LABEL = "capture_size_label";
+    /** Preview aspect enum name: ONE_ONE, THREE_FOUR, NINE_SIXTEEN, FULL. */
+    private static final String KEY_PREVIEW_ASPECT = "preview_aspect";
+    private static final String KEY_MIRROR_FRONT = "mirror_front_enabled";
     /** Legacy int slot 0–3; removed after {@link #migrateLegacyCameraIndexIfNeeded}. */
     private static final String KEY_CAMERA_ID_INDEX = "camera_id_index";
 
@@ -127,5 +130,35 @@ public final class PhotoSavePrefs {
         SharedPreferences p =
                 context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         p.edit().putString(KEY_CAPTURE_SIZE_LABEL, label.trim()).apply();
+    }
+
+    @Nullable
+    public static String getPreviewAspect(@NonNull Context context) {
+        SharedPreferences p =
+                context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String raw = p.getString(KEY_PREVIEW_ASPECT, null);
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return raw.trim();
+    }
+
+    public static void setPreviewAspect(@NonNull Context context, @NonNull String aspectName) {
+        SharedPreferences p =
+                context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        p.edit().putString(KEY_PREVIEW_ASPECT, aspectName.trim()).apply();
+    }
+
+    /** Front-camera preview mirror; default true per product spec. */
+    public static boolean getMirrorFrontEnabled(@NonNull Context context) {
+        SharedPreferences p =
+                context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        return p.getBoolean(KEY_MIRROR_FRONT, true);
+    }
+
+    public static void setMirrorFrontEnabled(@NonNull Context context, boolean enabled) {
+        SharedPreferences p =
+                context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        p.edit().putBoolean(KEY_MIRROR_FRONT, enabled).apply();
     }
 }
