@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="arch_top_bar_min_height">52dp</dimen>
+    <dimen name="arch_touch_min">44dp</dimen>
+    <dimen name="arch_padding_screen_h">12dp</dimen>
+    <dimen name="arch_padding_screen_v">8dp</dimen>
+    <dimen name="arch_shutter_outer">72dp</dimen>
+    <dimen name="arch_thumb_size">52dp</dimen>
+    <dimen name="arch_corner_chip">999dp</dimen>
+    <dimen name="arch_corner_btn">12dp</dimen>
+    <dimen name="arch_bar_section_pad_v">6dp</dimen>
+    <!-- Outlined toggle 描边约一半在边界外，需留出空间避免被 HorizontalScrollView 等父布局裁剪 -->
+    <dimen name="arch_toggle_outline_inset">3dp</dimen>
+    <dimen name="arch_bottom_safe_pad">8dp</dimen>
+</resources>

@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/camera_stage"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/arch_bg"
+    tools:context=".preview.MainActivity">
+
+    <FrameLayout
+        android:id="@+id/preview_host"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <View
+            android:id="@+id/preview_placeholder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/arch_muted" />
+
+        <TextView
+            android:id="@+id/preview_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_margin="10dp"
+            android:text="@string/preview_placeholder_label"
+            android:textColor="#73E00A0A"
+            android:textSize="11sp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/resolution_hud"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:clickable="false"
+            android:focusable="false"
+            app:cardBackgroundColor="#8506060A"
+            app:cardCornerRadius="5dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#17FFFFFF"
+            app:strokeWidth="1dp">
+
+            <TextView
+                android:id="@+id/resolution_hud_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:lineSpacingExtra="1dp"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="6dp"
+                android:textColor="@color/arch_text"
+                android:textSize="9sp"
+                tools:text="预览 1440×1080\n拍照 4096×3072\n显示区 1080×1440 px" />
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
+
+    <View
+        android:id="@+id/overlay_readability"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/arch_overlay_readability"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@drawable/arch_top_bar_scrim"
+        android:gravity="center_vertical"
+        android:minHeight="@dimen/arch_top_bar_min_height"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/arch_padding_screen_h"
+        android:paddingTop="@dimen/arch_padding_screen_v"
+        android:paddingBottom="@dimen/arch_padding_screen_v">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_settings"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="@dimen/arch_touch_min"
+            android:layout_height="@dimen/arch_touch_min"
+            android:contentDescription="@string/settings"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:text="⚙"
+            android:textSize="23sp"
+            app:backgroundTint="@android:color/transparent"
+            app:rippleColor="@color/arch_ripple_pressed" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/aspect_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:checkedButton="@+id/aspect_3_4"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/aspect_1_1"
+                style="@style/Widget.ArchCamera.Button.CameraToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="@string/aspect_1_1"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/aspect_3_4"
+                style="@style/Widget.ArchCamera.Button.CameraToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="@string/aspect_3_4"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/aspect_9_16"
+                style="@style/Widget.ArchCamera.Button.CameraToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="@string/aspect_9_16"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/aspect_full"
+                style="@style/Widget.ArchCamera.Button.CameraToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="@string/aspect_full"
+                android:textSize="12sp" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/bottom_stack"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/arch_bar_gradient_bottom"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:paddingBottom="@dimen/arch_bottom_safe_pad">
+
+        <ScrollView
+            android:id="@+id/section_aaa"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxHeight="280dp"
+            android:visibility="gone"
+            android:paddingHorizontal="@dimen/arch_padding_screen_h"
+            android:paddingTop="@dimen/arch_bar_section_pad_v"
+            android:paddingBottom="@dimen/arch_bar_section_pad_v"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/aaa_panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+        <HorizontalScrollView
+            android:id="@+id/focal_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/arch_padding_screen_h"
+            android:paddingTop="@dimen/arch_bar_section_pad_v"
+            android:paddingBottom="@dimen/arch_bar_section_pad_v"
+            android:scrollbars="none">
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:clipChildren="false"
+                android:paddingTop="@dimen/arch_toggle_outline_inset"
+                android:paddingBottom="@dimen/arch_toggle_outline_inset">
+
+                <LinearLayout
+                    android:id="@+id/focal_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/focal_06"
+                        style="@style/Widget.ArchCamera.Button.CameraToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="8dp"
+                        android:checkable="true"
+                        android:checked="true"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="14dp"
+                        android:text="@string/focal_06"
+                        android:textSize="13sp"
+                        app:cornerRadius="@dimen/arch_corner_chip" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/focal_10"
+                        style="@style/Widget.ArchCamera.Button.CameraToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="8dp"
+                        android:checkable="true"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="14dp"
+                        android:text="@string/focal_10"
+                        android:textSize="13sp"
+                        app:cornerRadius="@dimen/arch_corner_chip" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/focal_20"
+                        style="@style/Widget.ArchCamera.Button.CameraToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:checkable="true"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="14dp"
+                        android:text="@string/focal_20"
+                        android:textSize="13sp"
+                        app:cornerRadius="@dimen/arch_corner_chip" />
+                </LinearLayout>
+            </FrameLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/arch_padding_screen_h"
+            android:paddingTop="@dimen/arch_bar_section_pad_v"
+            android:paddingBottom="@dimen/arch_bar_section_pad_v">
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/mode_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:checkedButton="@+id/mode_normal"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mode_normal"
+                    style="@style/Widget.ArchCamera.Button.CameraToggle"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="@string/mode_normal"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mode_pro"
+                    style="@style/Widget.ArchCamera.Button.CameraToggle"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="@string/mode_pro"
+                    android:textSize="14sp" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
+
+            <ImageButton
+                android:id="@+id/btn_open_gallery"
+                android:layout_width="@dimen/arch_thumb_size"
+                android:layout_height="@dimen/arch_thumb_size"
+                android:background="@drawable/arch_ripple_thumb_placeholder"
+                android:contentDescription="@string/gallery"
+                android:padding="0dp"
+                android:scaleType="centerCrop" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/btn_shutter"
+                android:layout_width="@dimen/arch_shutter_outer"
+                android:layout_height="@dimen/arch_shutter_outer"
+                android:background="@drawable/arch_ripple_shutter_ring"
+                android:contentDescription="@string/shutter_stub"
+                android:padding="0dp"
+                android:scaleType="fitXY" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/btn_flip_camera"
+                android:layout_width="@dimen/arch_thumb_size"
+                android:layout_height="@dimen/arch_thumb_size"
+                android:background="@drawable/arch_ripple_thumb_placeholder"
+                android:contentDescription="@string/switch_camera"
+                android:padding="12dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_arch_flip_camera" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

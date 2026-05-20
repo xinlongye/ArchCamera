@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ArchCamera UI 原型</title>
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --surface: #16161a;
+      --surface2: #1f1f24;
+      --border: #2a2a32;
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+      --accent: #38bdf8;
+      --accent-dim: rgba(56, 189, 248, 0.25);
+      --danger: #f87171;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --top-bar-h: 52px;
+      --touch-min: 44px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #050506;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 15px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 12px 24px;
+    }
+
+    .phone {
+      width: 100%;
+      max-width: 412px;
+      min-height: calc(100vh - 120px);
+      min-height: calc(100dvh - 120px);
+      background: var(--bg);
+      border-radius: 28px;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .screen {
+      display: none;
+      position: absolute;
+      inset: 0;
+      flex-direction: column;
+      background: var(--bg);
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    /* ---------- Camera ---------- */
+    .camera-stage {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .preview-box {
+      position: absolute;
+      left: 0;
+      z-index: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+    .preview-box .preview-label {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+
+    .preview-flash {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      background: #fff;
+      opacity: 0;
+      transition: opacity 0.08s ease-out;
+    }
+    .preview-flash.on {
+      opacity: 0.65;
+      transition: none;
+    }
+
+    .overlay-readability {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.55) 0%,
+        transparent 18%,
+        transparent 55%,
+        rgba(0, 0, 0, 0.45) 100%
+      );
+      opacity: 0.85;
+    }
+    [data-aspect="full"] .overlay-readability {
+      opacity: 1;
+    }
+
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      min-height: var(--top-bar-h);
+      padding: var(--safe-top) 10px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent);
+    }
+
+    .icon-btn {
+      min-width: var(--touch-min);
+      min-height: var(--touch-min);
+      border: none;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      padding: 0 10px;
+    }
+    .icon-btn:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.14); }
+
+    .aspect-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .chip {
+      min-height: 32px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .chip:active { opacity: 0.85; }
+
+    .settings-hint {
+      position: absolute;
+      top: calc(var(--top-bar-h) + var(--safe-top) + 4px);
+      left: 10px;
+      z-index: 19;
+      max-width: 58%;
+      font-size: 10px;
+      line-height: 1.35;
+      color: rgba(255, 255, 255, 0.55);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+      pointer-events: none;
+    }
+
+    .bottom-stack {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: stretch;
+      padding-bottom: calc(8px + var(--safe-bottom));
+      gap: 0;
+    }
+
+    .bar-section {
+      padding: 6px 12px 8px;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.35));
+    }
+
+    .segmented {
+      display: flex;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .segmented button {
+      flex: 1;
+      min-height: 40px;
+      border: none;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .segmented button.active {
+      background: rgba(56, 189, 248, 0.22);
+      color: var(--accent);
+    }
+
+    .focal-row, .mode-row-inner {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pill {
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .pill.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .pill:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .aaa-panel {
+      max-height: 42vh;
+      overflow-y: auto;
+      padding-bottom: 4px;
+    }
+    .aaa-row {
+      display: grid;
+      grid-template-columns: 72px 44px 1fr 52px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .aaa-name { font-size: 12px; color: var(--muted); }
+    .am-toggle {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 0;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .am-toggle.manual { border-color: var(--accent); color: var(--accent); }
+    .aaa-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .aaa-val {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      text-align: right;
+    }
+
+    .bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px 4px;
+    }
+    .thumb-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      padding: 0;
+      cursor: pointer;
+      background: var(--surface2);
+    }
+    .thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .shutter-wrap {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+    .shutter {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+      padding: 0;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    }
+    .shutter:active { transform: scale(0.94); }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 100px;
+      transform: translateX(-50%);
+      z-index: 200;
+      background: rgba(20, 20, 24, 0.92);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ---------- Settings / Gallery / Viewer shared top bar ---------- */
+    .subtop {
+      flex-shrink: 0;
+      min-height: var(--top-bar-h);
+      padding: calc(8px + var(--safe-top)) 10px 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .subtop h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .scroll-body {
+      flex: 1;
+      overflow: auto;
+      padding: 14px 14px calc(20px + var(--safe-bottom));
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .field select, .field input[type="text"] {
+      width: 100%;
+      min-height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      padding: 0 12px;
+      font-size: 15px;
+    }
+    .path-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .path-row input { flex: 1; }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .switch-row span { font-size: 15px; }
+    input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Gallery */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .gallery-grid button {
+      aspect-ratio: 1;
+      border: none;
+      border-radius: 8px;
+      overflow: hidden;
+      padding: 0;
+      cursor: pointer;
+      background: var(--surface2);
+    }
+    .gallery-grid button img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Viewer — EXIF HUD（叠在图上，不占独立栏） */
+    .viewer-stage {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+      min-height: 0;
+    }
+
+    .viewer-exif-hud {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      z-index: 2;
+      max-width: min(96%, 18em);
+      pointer-events: none;
+      padding: 5px 7px 6px;
+      border-radius: 5px;
+      background: rgba(6, 6, 10, 0.52);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    }
+    .viewer-exif-hud .exif-heading {
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: rgba(56, 189, 248, 0.85);
+      margin: 0 0 4px;
+      text-transform: uppercase;
+      opacity: 0.95;
+    }
+    .viewer-exif-hud .exif-grid {
+      margin: 0;
+      display: grid;
+      grid-template-columns: minmax(3.2em, auto) 1fr;
+      gap: 1px 8px;
+      align-items: baseline;
+      font-size: 9px;
+      line-height: 1.22;
+    }
+    .viewer-exif-hud .exif-grid dt {
+      margin: 0;
+      color: rgba(161, 161, 170, 0.92);
+      font-weight: 500;
+    }
+    .viewer-exif-hud .exif-grid dd {
+      margin: 0;
+      color: rgba(244, 244, 245, 0.96);
+      font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-align: right;
+      word-break: break-word;
+    }
+    .viewer-img-wrap {
+      position: relative;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: center center;
+    }
+    .viewer-stage img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .zoom-toolbar {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .prototype-footer {
+      max-width: 520px;
+      margin-top: 16px;
+      padding: 0 8px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #71717a;
+      text-align: center;
+    }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="phone" id="phone">
+      <!-- Camera -->
+      <div id="screen-camera" class="screen active" data-aspect="3-4" data-mode="normal" data-facing="back">
+        <div class="camera-stage" id="camera-stage">
+          <div id="preview-box" class="preview-box">
+            <img id="preview-img" alt="" />
+            <div class="preview-label">预览占位 (Camera2)</div>
+          </div>
+          <div class="preview-flash" id="preview-flash" aria-hidden="true"></div>
+          <div class="overlay-readability"></div>
+
+          <div class="settings-hint" id="settings-hint"></div>
+
+          <header class="top-bar" id="top-bar-camera">
+            <button type="button" class="icon-btn" id="btn-open-settings" title="设置">⚙</button>
+            <div class="aspect-bar" id="aspect-bar">
+              <button type="button" class="chip" data-aspect="1-1">1:1</button>
+              <button type="button" class="chip" data-aspect="3-4">3:4</button>
+              <button type="button" class="chip" data-aspect="9-16">9:16</button>
+              <button type="button" class="chip" data-aspect="full">全屏</button>
+            </div>
+          </header>
+
+          <div class="bottom-stack">
+            <div class="bar-section" style="padding-top: 4px;">
+              <div class="bottom-bar">
+                <button type="button" class="thumb-btn" id="btn-open-gallery" title="图库">
+                  <img id="thumb-strip" alt="" />
+                </button>
+                <div class="shutter-wrap">
+                  <button type="button" class="shutter" id="btn-shutter" title="拍照"></button>
+                </div>
+                <button type="button" class="icon-btn" id="btn-flip-camera" title="切换前后摄">⟲</button>
+              </div>
+            </div>
+
+            <div class="bar-section">
+              <div class="segmented" id="mode-seg">
+                <button type="button" data-mode="normal" class="active">普通</button>
+                <button type="button" data-mode="pro">专业</button>
+              </div>
+            </div>
+
+            <div class="bar-section" id="focal-section">
+              <div class="focal-row" id="focal-row">
+                <button type="button" class="pill focal-pill active" data-focal="0.6">0.6×</button>
+                <button type="button" class="pill focal-pill" data-focal="1">1.0×</button>
+                <button type="button" class="pill focal-pill" data-focal="2">2.0×</button>
+              </div>
+            </div>
+
+            <div class="bar-section" id="aaa-section" hidden>
+              <div class="aaa-panel" id="aaa-panel"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div id="screen-settings" class="screen">
+        <header class="subtop">
+          <button type="button" class="icon-btn" id="btn-settings-back" aria-label="返回">←</button>
+          <h1>设置</h1>
+        </header>
+        <div class="scroll-body">
+          <div class="field">
+            <label for="sel-preview-res">预览分辨率</label>
+            <select id="sel-preview-res"></select>
+          </div>
+          <div class="field">
+            <label for="sel-capture-res">拍照分辨率</label>
+            <select id="sel-capture-res"></select>
+          </div>
+          <div class="field">
+            <label for="save-path">拍照保存位置</label>
+            <div class="path-row">
+              <input type="text" id="save-path" readonly />
+              <button type="button" class="icon-btn" id="btn-browse-path">浏览</button>
+            </div>
+          </div>
+          <div class="switch-row">
+            <span>前摄镜像（预览镜像 + 拍照镜像保存）</span>
+            <input type="checkbox" id="chk-mirror" checked />
+          </div>
+        </div>
+      </div>
+
+      <!-- Gallery -->
+      <div id="screen-gallery" class="screen">
+        <header class="subtop">
+          <button type="button" class="icon-btn" id="btn-gallery-back" aria-label="返回">←</button>
+          <h1>图库</h1>
+        </header>
+        <div class="scroll-body">
+          <div class="gallery-grid" id="gallery-grid"></div>
+        </div>
+      </div>
+
+      <!-- Viewer -->
+      <div id="screen-viewer" class="screen">
+        <header class="subtop">
+          <button type="button" class="icon-btn" id="btn-viewer-back" aria-label="返回">←</button>
+          <h1>查看</h1>
+        </header>
+        <div class="viewer-stage" id="viewer-stage">
+          <div class="viewer-exif-hud" id="viewer-exif"></div>
+          <div class="viewer-img-wrap" id="viewer-img-wrap">
+            <img id="viewer-img" alt="" />
+          </div>
+        </div>
+        <div class="zoom-toolbar">
+          <button type="button" class="icon-btn" id="zoom-out">−</button>
+          <button type="button" class="icon-btn" id="zoom-reset">1:1</button>
+          <button type="button" class="icon-btn" id="zoom-in">+</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="prototype-footer">
+      <strong>ArchCamera UI 原型</strong>（HTML）：四屏导航与布局演示；预览 / 图库 / 查看器为占位图。<br />
+      <strong>真机说明：</strong>在 Android 中若设置里指定了预览 / 拍照分辨率，相机管线会以所选分辨率优先，可能覆盖本原型中仅靠比例条驱动的预览几何逻辑；本页比例条仅演示「短边:长边」与对齐规则。
+    </p>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+(function () {
+  const PREVIEW_RES_OPTIONS = ["1440×1080", "1920×1080", "1280×720"];
+  const CAPTURE_RES_OPTIONS = ["4096×3072", "4000×3000", "3264×2448"];
+
+  const state = {
+    aspect: "3-4",
+    mode: "normal",
+    facing: "back",
+    focal: "0.6",
+    previewRes: PREVIEW_RES_OPTIONS[0],
+    captureRes: CAPTURE_RES_OPTIONS[0],
+    savePath: "/storage/emulated/0/DCIM/Camera",
+    mirrorFront: true,
+  };
+
+  const AAA_DEFS = [
+    { id: "focus", name: "对焦", min: 0, max: 100, step: 1, value: 50, format: (v) => v },
+    { id: "ev", name: "曝光补偿", min: -3, max: 3, step: 0.1, value: 0, format: (v) => v.toFixed(1) + " EV" },
+    { id: "iso", name: "ISO", min: 50, max: 6400, step: 50, value: 400, format: (v) => String(Math.round(v)) },
+    { id: "shutter", name: "快门", min: 0, max: 24, step: 1, value: 12, format: (v) => shutterLabel(v) },
+    { id: "wb", name: "白平衡", min: 2000, max: 10000, step: 100, value: 5200, format: (v) => Math.round(v) + " K" },
+  ];
+
+  function shutterLabel(idx) {
+    const stops = ["1/8000", "1/4000", "1/2000", "1/1000", "1/500", "1/250", "1/125", "1/60", "1/30", "1/15", "1/8", "1/4", "1/2", "1\"", "2\"", "4\"", "8\"", "15\"", "30\"", "B"];
+    return stops[Math.min(Math.max(Math.round(idx), 0), stops.length - 1)] + "s";
+  }
+
+  function svgDataUri(hue, sub) {
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">' +
+      '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0%" stop-color="hsl(' + hue + ',65%,38%)"/>' +
+      '<stop offset="100%" stop-color="hsl(' + hue + ',45%,14%)"/>' +
+      '</linearGradient></defs>' +
+      '<rect width="400" height="400" fill="url(#g)"/>' +
+      '<circle cx="200" cy="200" r="120" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>' +
+      '<text x="200" y="208" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-size="15" font-family="sans-serif">' +
+      (sub || "占位") + "</text></svg>";
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  function makeExifForIndex(i) {
+    return {
+      file: "IMG_" + (1000 + i) + ".jpg",
+      dimensions: state.captureRes.replace("×", " × "),
+      aperture: "f/1.8",
+      shutter: "1/120 s",
+      iso: "200",
+      focalLength: "24 mm（等效）",
+      whiteBalance: 5200 + (i % 5) * 50 + " K",
+      datetime: "2026-05-10 14:32:0" + (i % 10),
+    };
+  }
+
+  const galleryMeta = [];
+  for (let i = 0; i < 12; i++) {
+    const hue = (i * 29) % 360;
+    galleryMeta.push({
+      src: svgDataUri(hue, "IMG_" + (1000 + i)),
+      exif: makeExifForIndex(i),
+    });
+  }
+
+  const els = {
+    phone: document.getElementById("phone"),
+    screens: {
+      camera: document.getElementById("screen-camera"),
+      settings: document.getElementById("screen-settings"),
+      gallery: document.getElementById("screen-gallery"),
+      viewer: document.getElementById("screen-viewer"),
+    },
+    stage: document.getElementById("camera-stage"),
+    previewBox: document.getElementById("preview-box"),
+    previewImg: document.getElementById("preview-img"),
+    previewFlash: document.getElementById("preview-flash"),
+    topBar: document.getElementById("top-bar-camera"),
+    settingsHint: document.getElementById("settings-hint"),
+    aspectBar: document.getElementById("aspect-bar"),
+    focalSection: document.getElementById("focal-section"),
+    aaaSection: document.getElementById("aaa-section"),
+    aaaPanel: document.getElementById("aaa-panel"),
+    modeSeg: document.getElementById("mode-seg"),
+    thumbStrip: document.getElementById("thumb-strip"),
+    toast: document.getElementById("toast"),
+    selPreview: document.getElementById("sel-preview-res"),
+    selCapture: document.getElementById("sel-capture-res"),
+    savePath: document.getElementById("save-path"),
+    chkMirror: document.getElementById("chk-mirror"),
+    galleryGrid: document.getElementById("gallery-grid"),
+    viewerExif: document.getElementById("viewer-exif"),
+    viewerStage: document.getElementById("viewer-stage"),
+    viewerWrap: document.getElementById("viewer-img-wrap"),
+    viewerImg: document.getElementById("viewer-img"),
+  };
+
+  function renderViewerExif(exif) {
+    var root = els.viewerExif;
+    root.textContent = "";
+    var h = document.createElement("div");
+    h.className = "exif-heading";
+    h.textContent = "EXIF";
+    root.appendChild(h);
+    var dl = document.createElement("dl");
+    dl.className = "exif-grid";
+    var pairs = [
+      ["文件", exif.file],
+      ["分辨率", exif.dimensions],
+      ["光圈", exif.aperture],
+      ["快门", exif.shutter],
+      ["ISO", exif.iso],
+      ["焦距", exif.focalLength],
+      ["白平衡", exif.whiteBalance],
+      ["拍摄时间", exif.datetime],
+    ];
+    pairs.forEach(function (pair) {
+      var dt = document.createElement("dt");
+      dt.textContent = pair[0];
+      var dd = document.createElement("dd");
+      dd.textContent = pair[1];
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    });
+    root.appendChild(dl);
+  }
+
+  function fillSelect(sel, options, current) {
+    sel.innerHTML = "";
+    options.forEach(function (opt) {
+      const o = document.createElement("option");
+      o.value = opt;
+      o.textContent = opt;
+      if (opt === current) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+
+  function showScreen(name) {
+    Object.keys(els.screens).forEach(function (k) {
+      els.screens[k].classList.toggle("active", k === name);
+    });
+    if (name === "camera") {
+      requestAnimationFrame(updatePreviewGeometry);
+    }
+  }
+
+  function showToast(msg) {
+    els.toast.textContent = msg;
+    els.toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () {
+      els.toast.classList.remove("show");
+    }, 1600);
+  }
+
+  function updateSettingsHint() {
+    els.settingsHint.textContent =
+      "设置联动 · 预览 " +
+      state.previewRes +
+      " · 拍照 " +
+      state.captureRes +
+      " · 保存 " +
+      state.savePath.split("/").pop();
+  }
+
+  function updatePreviewGeometry() {
+    const stage = els.stage;
+    const preview = els.previewBox;
+    const topBar = els.topBar;
+    if (!stage || !preview || !topBar) return;
+
+    const W = stage.clientWidth;
+    const H = stage.clientHeight;
+    const topBarH = topBar.offsetHeight;
+
+    preview.style.width = W + "px";
+    preview.style.right = "auto";
+
+    if (state.aspect === "full") {
+      preview.style.top = "0";
+      preview.style.left = "0";
+      preview.style.height = H + "px";
+      els.screens.camera.setAttribute("data-aspect", "full");
+      return;
+    }
+
+    els.screens.camera.setAttribute("data-aspect", state.aspect);
+
+    var ratioLongPerShort;
+    if (state.aspect === "1-1") ratioLongPerShort = 1;
+    else if (state.aspect === "3-4") ratioLongPerShort = 4 / 3;
+    else ratioLongPerShort = 16 / 9;
+
+    var previewH = W * ratioLongPerShort;
+    preview.style.height = previewH + "px";
+
+    if (state.aspect === "9-16") {
+      var top = (H - previewH) / 2;
+      preview.style.top = Math.max(0, top) + "px";
+    } else {
+      preview.style.top = topBarH + "px";
+    }
+    preview.style.left = "0";
+  }
+
+  function syncAspectChips() {
+    els.aspectBar.querySelectorAll(".chip").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-aspect") === state.aspect);
+    });
+  }
+
+  function syncModeUi() {
+    els.phone.setAttribute("data-mode", state.mode);
+    els.modeSeg.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-mode") === state.mode);
+    });
+    els.aaaSection.hidden = state.mode !== "pro";
+  }
+
+  function syncFacingUi() {
+    els.phone.setAttribute("data-facing", state.facing);
+    var showFocal = state.facing === "back";
+    els.focalSection.hidden = !showFocal;
+  }
+
+  function buildAaaPanel() {
+    els.aaaPanel.innerHTML = "";
+    AAA_DEFS.forEach(function (def) {
+      var row = document.createElement("div");
+      row.className = "aaa-row";
+      row.dataset.aaaId = def.id;
+
+      var name = document.createElement("div");
+      name.className = "aaa-name";
+      name.textContent = def.name;
+
+      var am = document.createElement("button");
+      am.type = "button";
+      am.className = "am-toggle";
+      am.textContent = "A";
+      am.dataset.manual = "false";
+
+      var range = document.createElement("input");
+      range.type = "range";
+      range.min = String(def.min);
+      range.max = String(def.max);
+      range.step = String(def.step);
+      range.value = String(def.value);
+      range.disabled = true;
+
+      var val = document.createElement("div");
+      val.className = "aaa-val";
+      val.textContent = def.format(def.value);
+
+      am.addEventListener("click", function () {
+        var manual = am.dataset.manual === "true";
+        manual = !manual;
+        am.dataset.manual = manual ? "true" : "false";
+        am.textContent = manual ? "M" : "A";
+        am.classList.toggle("manual", manual);
+        range.disabled = !manual;
+      });
+
+      range.addEventListener("input", function () {
+        var v = parseFloat(range.value);
+        val.textContent = def.format(v);
+      });
+
+      row.appendChild(name);
+      row.appendChild(am);
+      row.appendChild(range);
+      row.appendChild(val);
+      els.aaaPanel.appendChild(row);
+    });
+  }
+
+  function wireCamera() {
+    document.getElementById("btn-open-settings").addEventListener("click", function () {
+      showScreen("settings");
+    });
+    document.getElementById("btn-open-gallery").addEventListener("click", function () {
+      showScreen("gallery");
+    });
+    document.getElementById("btn-flip-camera").addEventListener("click", function () {
+      state.facing = state.facing === "back" ? "front" : "back";
+      syncFacingUi();
+      showToast(state.facing === "back" ? "后摄" : "前摄");
+    });
+    document.getElementById("btn-shutter").addEventListener("click", function () {
+      els.previewFlash.classList.add("on");
+      setTimeout(function () {
+        els.previewFlash.classList.remove("on");
+      }, 80);
+      showToast("已拍照（原型）");
+    });
+
+    els.aspectBar.addEventListener("click", function (e) {
+      var btn = e.target.closest(".chip");
+      if (!btn) return;
+      state.aspect = btn.getAttribute("data-aspect");
+      syncAspectChips();
+      updatePreviewGeometry();
+    });
+
+    els.modeSeg.addEventListener("click", function (e) {
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      state.mode = btn.getAttribute("data-mode");
+      syncModeUi();
+    });
+
+    document.getElementById("focal-row").addEventListener("click", function (e) {
+      var pill = e.target.closest(".focal-pill");
+      if (!pill) return;
+      document.querySelectorAll(".focal-pill").forEach(function (p) {
+        p.classList.toggle("active", p === pill);
+      });
+      state.focal = pill.getAttribute("data-focal");
+    });
+
+    window.addEventListener("resize", updatePreviewGeometry);
+    if (window.ResizeObserver) {
+      new ResizeObserver(updatePreviewGeometry).observe(els.stage);
+    }
+  }
+
+  function wireSettings() {
+    document.getElementById("btn-settings-back").addEventListener("click", function () {
+      showScreen("camera");
+    });
+    fillSelect(els.selPreview, PREVIEW_RES_OPTIONS, state.previewRes);
+    fillSelect(els.selCapture, CAPTURE_RES_OPTIONS, state.captureRes);
+    els.savePath.value = state.savePath;
+    els.chkMirror.checked = state.mirrorFront;
+
+    els.selPreview.addEventListener("change", function () {
+      state.previewRes = els.selPreview.value;
+      updateSettingsHint();
+    });
+    els.selCapture.addEventListener("change", function () {
+      state.captureRes = els.selCapture.value;
+      updateSettingsHint();
+      refreshGalleryExifLabels();
+    });
+    document.getElementById("btn-browse-path").addEventListener("click", function () {
+      var input = window.prompt("模拟选择目录（浏览器无法访问真实路径）", state.savePath);
+      if (input != null && input.trim()) {
+        state.savePath = input.trim();
+        els.savePath.value = state.savePath;
+        updateSettingsHint();
+      }
+    });
+    els.chkMirror.addEventListener("change", function () {
+      state.mirrorFront = els.chkMirror.checked;
+      updateSettingsHint();
+    });
+  }
+
+  function refreshGalleryExifLabels() {
+    galleryMeta.forEach(function (meta, i) {
+      meta.exif = makeExifForIndex(i);
+    });
+  }
+
+  function wireGallery() {
+    document.getElementById("btn-gallery-back").addEventListener("click", function () {
+      showScreen("camera");
+    });
+    els.galleryGrid.innerHTML = "";
+    galleryMeta.forEach(function (meta, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.dataset.index = String(i);
+      var img = document.createElement("img");
+      img.src = meta.src;
+      img.alt = "thumb " + i;
+      b.appendChild(img);
+      b.addEventListener("click", function () {
+        openViewer(i);
+      });
+      els.galleryGrid.appendChild(b);
+    });
+  }
+
+  var viewerScale = 1;
+
+  function openViewer(index) {
+    var meta = galleryMeta[index];
+    els.viewerImg.src = meta.src;
+    renderViewerExif(meta.exif);
+    viewerScale = 1;
+    applyViewerScale();
+    showScreen("viewer");
+  }
+
+  function applyViewerScale() {
+    viewerScale = Math.min(4, Math.max(0.5, viewerScale));
+    els.viewerWrap.style.transform = "scale(" + viewerScale + ")";
+  }
+
+  function wireViewer() {
+    document.getElementById("btn-viewer-back").addEventListener("click", function () {
+      showScreen("gallery");
+    });
+    document.getElementById("zoom-in").addEventListener("click", function () {
+      viewerScale *= 1.15;
+      applyViewerScale();
+    });
+    document.getElementById("zoom-out").addEventListener("click", function () {
+      viewerScale /= 1.15;
+      applyViewerScale();
+    });
+    document.getElementById("zoom-reset").addEventListener("click", function () {
+      viewerScale = 1;
+      applyViewerScale();
+    });
+    els.viewerStage.addEventListener(
+      "wheel",
+      function (e) {
+        e.preventDefault();
+        var delta = e.deltaY > 0 ? -0.08 : 0.08;
+        viewerScale *= 1 + delta;
+        applyViewerScale();
+      },
+      { passive: false }
+    );
+  }
+
+  els.previewImg.src = svgDataUri(200, "预览");
+  els.thumbStrip.src = galleryMeta[0].src;
+
+  buildAaaPanel();
+  wireCamera();
+  wireSettings();
+  wireGallery();
+  wireViewer();
+
+  syncAspectChips();
+  syncModeUi();
+  syncFacingUi();
+  updateSettingsHint();
+  requestAnimationFrame(updatePreviewGeometry);
+})();
+  </script>
+</body>
+</html>

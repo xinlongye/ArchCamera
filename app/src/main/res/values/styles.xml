@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 相机页：比例 / 焦段 / 模式切换 — 未选中也用亮色文字，避免与深色背景融为一体 -->
+    <style name="Widget.ArchCamera.Button.CameraToggle" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:textColor">@color/arch_toggle_button_text</item>
+        <item name="strokeColor">@color/arch_toggle_button_stroke</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="backgroundTint">@color/arch_toggle_button_background</item>
+        <item name="rippleColor">@color/arch_ripple_pressed</item>
+    </style>
+
+    <!-- 设置页 Spinner：折叠与下拉项对比度 -->
+    <style name="ThemeOverlay.ArchCamera.Spinner" parent="ThemeOverlay.MaterialComponents.Dark">
+        <item name="android:textColorPrimary">@color/arch_text</item>
+        <item name="android:textColorSecondary">@color/arch_text</item>
+        <item name="android:textColorPrimaryInverse">@color/arch_text</item>
+        <item name="colorOnSurface">@color/arch_text</item>
+        <item name="colorControlNormal">@color/arch_muted</item>
+    </style>
+</resources>

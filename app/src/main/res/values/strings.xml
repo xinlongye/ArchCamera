@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ArchCamera</string>
+    <string name="preview_placeholder_label">预览占位</string>
+    <string name="settings">设置</string>
+    <string name="gallery">图库</string>
+    <string name="gallery_thumb">照片缩略图</string>
+    <string name="gallery_empty">此目录下暂无图片</string>
+    <string name="gallery_permission_required">需要「照片和视频」读取权限才能显示图库</string>
+    <string name="viewer_title">查看</string>
+    <string name="back">返回</string>
+    <string name="aspect_1_1">1:1</string>
+    <string name="aspect_3_4">3:4</string>
+    <string name="aspect_9_16">9:16</string>
+    <string name="aspect_full">全屏</string>
+    <string name="mode_normal">普通</string>
+    <string name="mode_pro">专业</string>
+    <string name="focal_06">0.6×</string>
+    <string name="focal_10">1.0×</string>
+    <string name="focal_20">2.0×</string>
+    <string name="aaa_focus">对焦距离</string>
+    <string name="aaa_ev">曝光补偿</string>
+    <string name="aaa_iso">ISO</string>
+    <string name="aaa_shutter">快门</string>
+    <string name="aaa_wb">白平衡</string>
+    <string name="aaa_auto">A</string>
+    <string name="aaa_manual">M</string>
+    <string name="settings_camera_id">当前摄像头ID</string>
+    <string name="settings_camera_none">无可用摄像头</string>
+    <string name="settings_preview_resolution">预览分辨率</string>
+    <string name="settings_capture_resolution">拍照分辨率</string>
+    <string name="settings_save_path">拍照保存位置</string>
+    <string name="settings_save_path_action">保存</string>
+    <string name="settings_save_path_saved">保存位置已更新</string>
+    <string name="settings_save_path_empty">路径不能为空</string>
+    <string name="settings_mirror_front">前摄镜像（预览镜像 + 拍照镜像保存）</string>
+    <string name="shutter_stub">拍照（占位）</string>
+    <string name="zoom_reset">1:1</string>
+    <string name="exif_heading">EXIF</string>
+    <string name="exif_none">无法读取 EXIF</string>
+    <string name="camera_back">后摄</string>
+    <string name="camera_front">前摄</string>
+    <string name="switch_camera">切换前后摄像头</string>
+</resources>

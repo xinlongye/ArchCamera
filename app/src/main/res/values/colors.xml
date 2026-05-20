@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="arch_bg">#FF0A0A0C</color>
+    <color name="arch_surface">#FF16161A</color>
+    <color name="arch_surface2">#FF1F1F24</color>
+    <color name="arch_border">#FF2A2A32</color>
+    <color name="arch_text">#FFF4F4F5</color>
+    <color name="arch_muted">#FFA1A1AA</color>
+    <color name="arch_accent">#FF38BDF8</color>
+    <color name="arch_accent_dim">#4038BDF8</color>
+    <color name="arch_black">#FF000000</color>
+    <color name="arch_white">#FFFFFFFF</color>
+    <color name="arch_preview_scrim_top">#90000000</color>
+    <color name="arch_preview_scrim_bottom">#73000000</color>
+    <color name="arch_ripple_pressed">#33FFFFFF</color>
+</resources>

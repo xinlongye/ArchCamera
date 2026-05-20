@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/arch_bg"
+    android:orientation="vertical"
+    tools:context=".imageviewer.ImageViewerActivity">
+
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/arch_surface"
+        android:gravity="center_vertical"
+        android:minHeight="@dimen/arch_top_bar_min_height"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/arch_padding_screen_h"
+        android:paddingTop="@dimen/arch_padding_screen_v"
+        android:paddingBottom="@dimen/arch_padding_screen_v">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_back"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="@dimen/arch_touch_min"
+            android:layout_height="@dimen/arch_touch_min"
+            android:contentDescription="@string/back"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:text="←"
+            android:textColor="@color/arch_text"
+            android:textSize="20sp"
+            app:backgroundTint="@android:color/transparent"
+            app:rippleColor="#33FFFFFF" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/viewer_title"
+            android:textColor="@color/arch_text"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/arch_border" />
+
+    <FrameLayout
+        android:id="@+id/viewer_stage"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/arch_black">
+
+        <ImageView
+            android:id="@+id/viewer_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/viewer_title"
+            android:scaleType="fitCenter"
+            tools:src="@android:color/darker_gray" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/exif_hud"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginTop="6dp"
+            android:clickable="false"
+            android:focusable="false"
+            app:cardBackgroundColor="#8506060A"
+            app:cardCornerRadius="5dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#17FFFFFF"
+            app:strokeWidth="1dp">
+
+            <TextView
+                android:id="@+id/exif_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:lineSpacingExtra="1dp"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="6dp"
+                android:textColor="@color/arch_text"
+                android:textSize="9sp"
+                tools:text="EXIF\n..." />
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/zoom_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/arch_surface"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_zoom_out"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="@dimen/arch_touch_min"
+            android:layout_height="@dimen/arch_touch_min"
+            android:text="−"
+            android:textSize="18sp"
+            app:strokeColor="@color/arch_border" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_zoom_reset"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/arch_touch_min"
+            android:layout_marginHorizontal="16dp"
+            android:minWidth="@dimen/arch_touch_min"
+            android:text="@string/zoom_reset"
+            app:strokeColor="@color/arch_border" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_zoom_in"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="@dimen/arch_touch_min"
+            android:layout_height="@dimen/arch_touch_min"
+            android:text="+"
+            android:textSize="18sp"
+            app:strokeColor="@color/arch_border" />
+    </LinearLayout>
+</LinearLayout>
