@@ -30,11 +30,20 @@ final class PreviewImageAvailableListener implements ImageReader.OnImageAvailabl
 
     @Override
     public void onImageAvailable(ImageReader reader) {
-        Image image = reader.acquireLatestImage();
-        if (image == null) {
-            return;
-        }
+        // Drain pending images with acquireNextImage + explicit close (avoids Mali gralloc
+        // unlock issues from acquireLatestImage dropping frames internally).
+        Image image = null;
+        Image next;
         try {
+            while ((next = reader.acquireNextImage()) != null) {
+                if (image != null) {
+                    image.close();
+                }
+                image = next;
+            }
+            if (image == null) {
+                return;
+            }
             if (image.getFormat() != android.graphics.ImageFormat.YUV_420_888) {
                 return;
             }
@@ -66,7 +75,9 @@ final class PreviewImageAvailableListener implements ImageReader.OnImageAvailabl
         } catch (RuntimeException e) {
             Log.e(TAG, "Frame conversion failed", e);
         } finally {
-            image.close();
+            if (image != null) {
+                image.close();
+            }
         }
     }
 }

@@ -57,12 +57,10 @@ public final class Yuv420888ToNv21 {
         Image.Plane uPlane = planes[1];
         Image.Plane vPlane = planes[2];
 
-        ByteBuffer yBuf = yPlane.getBuffer();
-        ByteBuffer uBuf = uPlane.getBuffer();
-        ByteBuffer vBuf = vPlane.getBuffer();
-        yBuf.rewind();
-        uBuf.rewind();
-        vBuf.rewind();
+        // duplicate() avoids mutating Image plane buffer state (rewind can confuse Mali gralloc).
+        ByteBuffer yBuf = yPlane.getBuffer().duplicate();
+        ByteBuffer uBuf = uPlane.getBuffer().duplicate();
+        ByteBuffer vBuf = vPlane.getBuffer().duplicate();
 
         if (yBuf.isDirect() && uBuf.isDirect() && vBuf.isDirect() && out.isDirect()) {
             nativeConvert(

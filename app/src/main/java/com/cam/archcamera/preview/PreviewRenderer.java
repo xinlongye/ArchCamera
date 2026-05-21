@@ -10,7 +10,6 @@ import com.cam.archcamera.camera.PreviewFrameSink;
 import com.cam.archcamera.camera.PreviewFrameValidator;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -26,11 +25,13 @@ final class PreviewRenderer implements GLSurfaceView.Renderer, PreviewFrameSink 
         System.loadLibrary("archcamera");
     }
 
+    private static final int NV21_BUFFER_COUNT = 3;
+
     private long nativeHandle;
-    @Nullable private ByteBuffer buffer0;
-    @Nullable private ByteBuffer buffer1;
-    private final AtomicInteger writeIndex = new AtomicInteger(0);
-    private final AtomicInteger readIndex = new AtomicInteger(0);
+    @Nullable private ByteBuffer[] nv21Buffers;
+    private int displayIndex;
+    private int writeIndex = 1;
+    private int prevDisplayIndex = -1;
     private int frameWidth;
     private int frameHeight;
     private int rotationDegrees;
@@ -57,8 +58,7 @@ final class PreviewRenderer implements GLSurfaceView.Renderer, PreviewFrameSink 
             nativeDestroy(nativeHandle);
             nativeHandle = 0L;
         }
-        buffer0 = null;
-        buffer1 = null;
+        nv21Buffers = null;
         resetFpsStats();
     }
 
@@ -84,10 +84,13 @@ final class PreviewRenderer implements GLSurfaceView.Renderer, PreviewFrameSink 
             frameWidth = width;
             frameHeight = height;
             int nv21Size = width * height * 3 / 2;
-            buffer0 = ByteBuffer.allocateDirect(nv21Size);
-            buffer1 = ByteBuffer.allocateDirect(nv21Size);
-            writeIndex.set(0);
-            readIndex.set(0);
+            nv21Buffers = new ByteBuffer[NV21_BUFFER_COUNT];
+            for (int i = 0; i < NV21_BUFFER_COUNT; i++) {
+                nv21Buffers[i] = ByteBuffer.allocateDirect(nv21Size);
+            }
+            displayIndex = 0;
+            writeIndex = 1;
+            prevDisplayIndex = -1;
             hasFrame = false;
         }
         pendingNativeResize = true;
@@ -143,8 +146,11 @@ final class PreviewRenderer implements GLSurfaceView.Renderer, PreviewFrameSink 
     @Override
     public ByteBuffer getWriteBuffer() {
         synchronized (this) {
-            int wi = writeIndex.get();
-            return wi == 0 ? buffer0 : buffer1;
+            ByteBuffer[] buffers = nv21Buffers;
+            if (buffers == null) {
+                return null;
+            }
+            return buffers[writeIndex];
         }
     }
 
@@ -164,9 +170,13 @@ final class PreviewRenderer implements GLSurfaceView.Renderer, PreviewFrameSink 
         synchronized (this) {
             w = frameWidth;
             h = frameHeight;
-            int wi = writeIndex.get();
-            written = wi == 0 ? buffer0 : buffer1;
-            if (written == null || w <= 0 || h <= 0) {
+            ByteBuffer[] buffers = nv21Buffers;
+            if (buffers == null || w <= 0 || h <= 0) {
+                hasFrame = false;
+                return false;
+            }
+            written = buffers[writeIndex];
+            if (written == null) {
                 hasFrame = false;
                 return false;
             }
@@ -174,18 +184,32 @@ final class PreviewRenderer implements GLSurfaceView.Renderer, PreviewFrameSink 
                 hasFrame = false;
                 return false;
             }
-            readIndex.set(wi);
-            writeIndex.set(wi == 0 ? 1 : 0);
+            prevDisplayIndex = displayIndex;
+            displayIndex = writeIndex;
+            writeIndex = pickWriteIndex(displayIndex, prevDisplayIndex);
             hasFrame = true;
         }
         return true;
     }
 
+    /** Picks a buffer index that is not currently displayed or the previous display slot. */
+    private static int pickWriteIndex(int displayIndex, int prevDisplayIndex) {
+        for (int i = 0; i < NV21_BUFFER_COUNT; i++) {
+            if (i != displayIndex && i != prevDisplayIndex) {
+                return i;
+            }
+        }
+        return (displayIndex + 1) % NV21_BUFFER_COUNT;
+    }
+
     @Nullable
     private ByteBuffer getReadBuffer() {
         synchronized (this) {
-            int ri = readIndex.get();
-            return ri == 0 ? buffer0 : buffer1;
+            ByteBuffer[] buffers = nv21Buffers;
+            if (buffers == null) {
+                return null;
+            }
+            return buffers[displayIndex];
         }
     }
 

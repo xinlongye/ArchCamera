@@ -66,17 +66,20 @@ public final class CameraPreviewTransform {
                 break;
         }
 
-        int rotation;
-        if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
-            rotation = (sensorOrientation + displayDegrees) % 360;
-        } else {
-            rotation = (sensorOrientation - displayDegrees + 360) % 360;
-        }
+        // Same as Android computeRelativeRotation(): front sign=+1, back sign=-1.
+        int sign =
+                facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT ? 1 : -1;
+        int rotation = (sensorOrientation - displayDegrees * sign + 360) % 360;
 
         boolean mirror =
                 facing != null
                         && facing == CameraCharacteristics.LENS_FACING_FRONT
                         && PhotoSavePrefs.getMirrorFrontEnabled(context);
+
+        // Horizontal mirror is applied in GLES after rotation; invert rotation so preview stays upright.
+        if (mirror) {
+            rotation = (360 - rotation) % 360;
+        }
 
         return new Result(rotation, mirror);
     }

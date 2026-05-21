@@ -147,7 +147,14 @@ public class MainActivity extends AppCompatActivity {
                     backCamera = !backCamera;
                     refreshCameraAndModeUi();
                     applySelectedCameraIdForFacing(backCamera);
-                    scheduleResolutionSelectionIfPolicyChanged();
+                    // 立即按新摄像头重选分辨率并刷新 HUD；勿仅 scheduleResolutionSelection，
+                    // 否则 startPreview 触发的连续 layout 会反复重置 150ms 防抖，策略可能一直不落地。
+                    applyResolutionSelectionForCurrentState(true);
+                    if (hasCameraPermission()) {
+                        startPreviewIfReady();
+                    } else {
+                        applyPreviewStreamSizeFromPrefsOnly();
+                    }
                     Toast.makeText(
                                     this,
                                     backCamera ? R.string.camera_back : R.string.camera_front,
@@ -519,7 +526,11 @@ public class MainActivity extends AppCompatActivity {
             PhotoSavePrefs.setSelectedCameraId(this, camId);
         }
         String key = buildResolutionPolicyKey(camId);
-        boolean policyChanged = forceFromAspectChange || !key.equals(lastResolutionPolicyKey);
+        @Nullable String previousKey = lastResolutionPolicyKey;
+        boolean policyChanged = forceFromAspectChange || !key.equals(previousKey);
+        @Nullable String previousCamId = cameraIdFromPolicyKey(previousKey);
+        boolean selectedCameraChanged =
+                previousCamId != null && !previousCamId.equals(camId);
         String previousPreviewLabel = PhotoSavePrefs.getPreviewSizeLabel(this);
         Size previousStream =
                 PreviewStreamSizeResolver.resolve(
@@ -550,13 +561,23 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         refreshResolutionHud();
-        if (previewStreamChanged) {
+        if (previewStreamChanged || selectedCameraChanged) {
             if (hasCameraPermission()) {
                 startPreviewIfReady();
             } else {
                 applyPreviewStreamSizeFromPrefsOnly();
             }
         }
+    }
+
+    /** {@link #buildResolutionPolicyKey} 中摄像头 ID 为第一个 {@code #} 之前的段。 */
+    @Nullable
+    private static String cameraIdFromPolicyKey(@Nullable String key) {
+        if (key == null || key.isEmpty()) {
+            return null;
+        }
+        int sep = key.indexOf('#');
+        return sep < 0 ? key : key.substring(0, sep);
     }
 
     /**

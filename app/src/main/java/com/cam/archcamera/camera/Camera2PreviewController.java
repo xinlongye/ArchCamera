@@ -32,7 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class Camera2PreviewController {
 
     private static final String TAG = "Camera2Preview";
-    private static final int IMAGE_READER_MAX_IMAGES = 4;
+    /** Extra headroom when draining with {@link android.media.ImageReader#acquireNextImage()}. */
+    private static final int IMAGE_READER_MAX_IMAGES = 8;
 
     private final AtomicBoolean starting = new AtomicBoolean(false);
     private final AtomicBoolean open = new AtomicBoolean(false);
@@ -294,20 +295,6 @@ public final class Camera2PreviewController {
                     chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
             Range<Integer> target = PreviewTargetFps.pickAeTargetFpsRange(available);
             builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, target);
-            int maxAe = PreviewTargetFps.maxAeFpsUpperBound(available);
-            Log.i(
-                    TAG,
-                    "Preview AE available="
-                            + PreviewTargetFps.formatAeRanges(available)
-                            + " selected="
-                            + target
-                            + " (device max AE "
-                            + maxAe
-                            + " fps"
-                            + (PreviewTargetFps.supportsTargetAeFps(available)
-                                    ? ", 60 supported"
-                                    : ", 60 not in HAL list")
-                            + ")");
             Size stream = activeStreamSize;
             StreamConfigurationMap map =
                     PreviewTargetFps.getStreamConfigurationMap(chars);
