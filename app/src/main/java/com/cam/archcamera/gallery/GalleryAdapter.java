@@ -6,7 +6,6 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.cam.archcamera.databinding.ItemGalleryCellBinding;
 
 import java.util.List;
@@ -41,17 +40,14 @@ public final class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.Ce
     @Override
     public void onBindViewHolder(@NonNull CellHolder holder, int position) {
         GalleryItem item = items.get(position);
-        Glide.with(holder.binding.galleryThumb)
-                .load(item.getContentUri())
-                .centerCrop()
-                .into(holder.binding.galleryThumb);
+        GalleryThumbGlide.intoGridCell(holder.binding.galleryThumb, item.getContentUri());
         holder.binding.getRoot().setOnClickListener(v -> listener.onGalleryItemClick(item));
     }
 
     @Override
     public void onViewRecycled(@NonNull CellHolder holder) {
         super.onViewRecycled(holder);
-        Glide.with(holder.binding.galleryThumb).clear(holder.binding.galleryThumb);
+        GalleryThumbGlide.clear(holder.binding.galleryThumb);
     }
 
     @Override

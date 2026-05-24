@@ -34,7 +34,10 @@
     <string name="settings_save_path_saved">保存位置已更新</string>
     <string name="settings_save_path_empty">路径不能为空</string>
     <string name="settings_mirror_front">前摄镜像（预览镜像 + 拍照镜像保存）</string>
-    <string name="shutter_stub">拍照（占位）</string>
+    <string name="shutter">拍照</string>
+    <string name="photo_saved">照片已保存</string>
+    <string name="photo_capture_failed">拍照失败</string>
+    <string name="photo_capture_not_ready">相机未就绪</string>
     <string name="zoom_reset">1:1</string>
     <string name="exif_heading">EXIF</string>
     <string name="exif_none">无法读取 EXIF</string>

@@ -3,6 +3,7 @@ package com.cam.archcamera.preview;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.graphics.Outline;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
@@ -24,7 +25,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.bumptech.glide.Glide;
 import com.cam.archcamera.R;
 import com.cam.archcamera.camera.AspectResolutionSelector;
 import com.cam.archcamera.camera.Camera2Enum;
@@ -35,6 +35,7 @@ import com.cam.archcamera.databinding.ItemAaaRowBinding;
 import com.cam.archcamera.gallery.GalleryActivity;
 import com.cam.archcamera.gallery.GalleryItem;
 import com.cam.archcamera.gallery.GalleryMediaRepository;
+import com.cam.archcamera.gallery.GalleryThumbGlide;
 import com.cam.archcamera.settings.PhotoSavePrefs;
 import com.cam.archcamera.settings.SettingsActivity;
 import com.cam.archcamera.util.WindowInsetsHelper;
@@ -136,8 +137,7 @@ public class MainActivity extends AppCompatActivity {
                 v -> startActivity(new Intent(this, GalleryActivity.class)));
         setupGalleryThumbnailOutline();
 
-        binding.btnShutter.setOnClickListener(
-                v -> Toast.makeText(this, R.string.shutter_stub, Toast.LENGTH_SHORT).show());
+        binding.btnShutter.setOnClickListener(v -> takePhoto());
 
         binding.btnFlipCamera.setOnClickListener(
                 v -> {
@@ -298,8 +298,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void clearGalleryThumbnail() {
-        Glide.with(this).clear(binding.btnOpenGallery);
+        GalleryThumbGlide.clear(binding.btnOpenGallery);
         binding.btnOpenGallery.setImageDrawable(null);
+    }
+
+    private void takePhoto() {
+        if (!hasCameraPermission()) {
+            Toast.makeText(this, R.string.camera_permission_denied, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!previewController.isOpen()) {
+            Toast.makeText(this, R.string.photo_capture_not_ready, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        binding.btnShutter.setEnabled(false);
+        previewController.captureStill(
+                this,
+                new Camera2PreviewController.StillCaptureCallback() {
+                    @Override
+                    public void onSuccess(@NonNull Uri uri) {
+                        binding.btnShutter.setEnabled(true);
+                        GalleryThumbGlide.intoBottomBar(binding.btnOpenGallery, uri);
+                        Toast.makeText(MainActivity.this, R.string.photo_saved, Toast.LENGTH_SHORT)
+                                .show();
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull String message) {
+                        binding.btnShutter.setEnabled(true);
+                        Toast.makeText(
+                                        MainActivity.this,
+                                        R.string.photo_capture_failed,
+                                        Toast.LENGTH_SHORT)
+                                .show();
+                    }
+                });
     }
 
     private void refreshGalleryThumbnail() {
@@ -310,10 +343,7 @@ public class MainActivity extends AppCompatActivity {
             clearGalleryThumbnail();
             return;
         }
-        Glide.with(this)
-                .load(latest.getContentUri())
-                .centerCrop()
-                .into(binding.btnOpenGallery);
+        GalleryThumbGlide.intoBottomBar(binding.btnOpenGallery, latest.getContentUri());
     }
 
     /** 焦段为独立圆角按钮（非 ToggleGroup），在此维持单选。 */
@@ -532,12 +562,14 @@ public class MainActivity extends AppCompatActivity {
         boolean selectedCameraChanged =
                 previousCamId != null && !previousCamId.equals(camId);
         String previousPreviewLabel = PhotoSavePrefs.getPreviewSizeLabel(this);
+        String previousCaptureLabel = PhotoSavePrefs.getCaptureSizeLabel(this);
         Size previousStream =
                 PreviewStreamSizeResolver.resolve(
                         this,
                         camId,
                         PreviewSizeLabel.parseOrFallback(previousPreviewLabel));
         boolean previewStreamChanged = false;
+        boolean captureStreamChanged = false;
         if (policyChanged) {
             lastResolutionPolicyKey = key;
             float target = computeTargetLongPerShortForCurrentAspect();
@@ -557,11 +589,15 @@ public class MainActivity extends AppCompatActivity {
                                 || !label.equals(previousPreviewLabel);
             }
             if (c != null) {
-                PhotoSavePrefs.setCaptureSizeLabel(this, Camera2Enum.formatSize(c));
+                String captureLabel = Camera2Enum.formatSize(c);
+                captureStreamChanged =
+                        previousCaptureLabel == null
+                                || !captureLabel.equals(previousCaptureLabel.trim());
+                PhotoSavePrefs.setCaptureSizeLabel(this, captureLabel);
             }
         }
         refreshResolutionHud();
-        if (previewStreamChanged || selectedCameraChanged) {
+        if (previewStreamChanged || selectedCameraChanged || captureStreamChanged) {
             if (hasCameraPermission()) {
                 startPreviewIfReady();
             } else {

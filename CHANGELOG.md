@@ -2,6 +2,20 @@
 
 版本号与 `version.properties` 保持一致；发布前请同步更新本文件。
 
+## [1.1.2] - 2026-05-24
+
+### 新增
+
+- Camera2 静态拍照：预览会话内增加 JPEG `ImageReader`，快门触发 `TEMPLATE_STILL_CAPTURE` 并写入存储
+- `PhotoCaptureSaver`：按设置路径保存 JPEG、写入 EXIF（含方向与前摄镜像）、MediaStore 索引与媒体扫描
+- `CaptureStreamSizeResolver`、`JpegOrientationHelper`、`StillCaptureImageListener`：拍照流尺寸解析、JPEG 方向与帧回调拆分
+
+### 改进
+
+- 主界面快门由占位改为真实拍照；成功后 Toast 并刷新底部图库缩略图
+- 分辨率策略：拍照流标签变化时与预览流一并触发重启，保持 HUD 与开流一致
+- 图库缩略图：`GalleryThumbGlide` 限制解码尺寸，避免 12MP 全图解码导致 OOM（网格与底部栏共用）
+
 ## [1.1.1] - 2026-05-21
 
 ### 修复

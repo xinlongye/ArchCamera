@@ -274,7 +274,6 @@ final class PreviewRenderer implements GLSurfaceView.Renderer, PreviewFrameSink 
         float fps = (float) (fpsFrameCount * 1_000_000_000L / (double) elapsed);
         fpsFrameCount = 0L;
         fpsWindowStartNs = now;
-        Log.d(TAG, String.format("preview fps: %.1f", fps));
         PreviewFpsListener listener = fpsListener;
         if (listener != null) {
             listener.onPreviewFpsUpdated(fps);

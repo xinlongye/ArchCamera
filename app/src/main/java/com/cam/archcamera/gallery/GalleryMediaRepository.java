@@ -89,10 +89,11 @@ public final class GalleryMediaRepository {
     }
 
     /**
-     * MediaStore RELATIVE_PATH uses trailing slash, e.g. {@code DCIM/Camera/}.
+     * MediaStore RELATIVE_PATH segment for a save directory under primary external storage, e.g.
+     * {@code DCIM/Camera/} (trailing slash required).
      */
     @Nullable
-    private static String toRelativePathForMediaStore(@NonNull String saveDirectoryAbsolute) {
+    public static String toRelativePathForMediaStore(@NonNull String saveDirectoryAbsolute) {
         File dir;
         try {
             dir = new File(saveDirectoryAbsolute.trim()).getCanonicalFile();
