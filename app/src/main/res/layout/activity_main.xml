@@ -61,6 +61,20 @@
                     tools:text="预览 1440×1080\n拍照 4096×3072\n显示区 1080×1440 px" />
 
                 <TextView
+                    android:id="@+id/camera_3a_hud_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="1dp"
+                    android:paddingHorizontal="7dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="0dp"
+                    android:text="@string/camera_3a_hud_unknown"
+                    android:textColor="@color/arch_text"
+                    android:textSize="9sp"
+                    tools:text="对焦 50\nEV 0.0 EV\nISO 400\n快门 1/60s\n白平衡 5200 K" />
+
+                <TextView
                     android:id="@+id/preview_fps_hud_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -181,7 +195,7 @@
         android:paddingBottom="@dimen/arch_bottom_safe_pad">
 
         <ScrollView
-            android:id="@+id/section_aaa"
+            android:id="@+id/section_camera_3a"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:maxHeight="280dp"
@@ -192,7 +206,7 @@
             android:scrollbars="none">
 
             <LinearLayout
-                android:id="@+id/aaa_panel"
+                android:id="@+id/camera_3a_panel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />

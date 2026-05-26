@@ -265,19 +265,19 @@
       cursor: not-allowed;
     }
 
-    .aaa-panel {
+    .camera-3a-panel {
       max-height: 42vh;
       overflow-y: auto;
       padding-bottom: 4px;
     }
-    .aaa-row {
+    .camera-3a-row {
       display: grid;
       grid-template-columns: 72px 44px 1fr 52px;
       align-items: center;
       gap: 8px;
       margin-bottom: 10px;
     }
-    .aaa-name { font-size: 12px; color: var(--muted); }
+    .camera-3a-name { font-size: 12px; color: var(--muted); }
     .am-toggle {
       font-size: 11px;
       font-weight: 700;
@@ -289,8 +289,8 @@
       cursor: pointer;
     }
     .am-toggle.manual { border-color: var(--accent); color: var(--accent); }
-    .aaa-row input[type="range"] { width: 100%; accent-color: var(--accent); }
-    .aaa-val {
+    .camera-3a-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .camera-3a-val {
       font-size: 11px;
       font-variant-numeric: tabular-nums;
       color: var(--text);
@@ -589,8 +589,8 @@
               </div>
             </div>
 
-            <div class="bar-section" id="aaa-section" hidden>
-              <div class="aaa-panel" id="aaa-panel"></div>
+            <div class="bar-section" id="camera-3a-section" hidden>
+              <div class="camera-3a-panel" id="camera-3a-panel"></div>
             </div>
           </div>
         </div>
@@ -680,7 +680,7 @@
     mirrorFront: true,
   };
 
-  const AAA_DEFS = [
+  const CAMERA_3A_DEFS = [
     { id: "focus", name: "对焦", min: 0, max: 100, step: 1, value: 50, format: (v) => v },
     { id: "ev", name: "曝光补偿", min: -3, max: 3, step: 0.1, value: 0, format: (v) => v.toFixed(1) + " EV" },
     { id: "iso", name: "ISO", min: 50, max: 6400, step: 50, value: 400, format: (v) => String(Math.round(v)) },
@@ -745,8 +745,8 @@
     settingsHint: document.getElementById("settings-hint"),
     aspectBar: document.getElementById("aspect-bar"),
     focalSection: document.getElementById("focal-section"),
-    aaaSection: document.getElementById("aaa-section"),
-    aaaPanel: document.getElementById("aaa-panel"),
+    camera3aSection: document.getElementById("camera-3a-section"),
+    camera3aPanel: document.getElementById("camera-3a-panel"),
     modeSeg: document.getElementById("mode-seg"),
     thumbStrip: document.getElementById("thumb-strip"),
     toast: document.getElementById("toast"),
@@ -881,7 +881,7 @@
     els.modeSeg.querySelectorAll("button").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-mode") === state.mode);
     });
-    els.aaaSection.hidden = state.mode !== "pro";
+    els.camera3aSection.hidden = state.mode !== "pro";
   }
 
   function syncFacingUi() {
@@ -890,15 +890,15 @@
     els.focalSection.hidden = !showFocal;
   }
 
-  function buildAaaPanel() {
-    els.aaaPanel.innerHTML = "";
-    AAA_DEFS.forEach(function (def) {
+  function buildCamera3aPanel() {
+    els.camera3aPanel.innerHTML = "";
+    CAMERA_3A_DEFS.forEach(function (def) {
       var row = document.createElement("div");
-      row.className = "aaa-row";
-      row.dataset.aaaId = def.id;
+      row.className = "camera-3a-row";
+      row.dataset.camera3aId = def.id;
 
       var name = document.createElement("div");
-      name.className = "aaa-name";
+      name.className = "camera-3a-name";
       name.textContent = def.name;
 
       var am = document.createElement("button");
@@ -916,7 +916,7 @@
       range.disabled = true;
 
       var val = document.createElement("div");
-      val.className = "aaa-val";
+      val.className = "camera-3a-val";
       val.textContent = def.format(def.value);
 
       am.addEventListener("click", function () {
@@ -937,7 +937,7 @@
       row.appendChild(am);
       row.appendChild(range);
       row.appendChild(val);
-      els.aaaPanel.appendChild(row);
+      els.camera3aPanel.appendChild(row);
     });
   }
 
@@ -1096,7 +1096,7 @@
   els.previewImg.src = svgDataUri(200, "预览");
   els.thumbStrip.src = galleryMeta[0].src;
 
-  buildAaaPanel();
+  buildCamera3aPanel();
   wireCamera();
   wireSettings();
   wireGallery();

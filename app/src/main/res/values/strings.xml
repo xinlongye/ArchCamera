@@ -18,13 +18,13 @@
     <string name="focal_06">0.6×</string>
     <string name="focal_10">1.0×</string>
     <string name="focal_20">2.0×</string>
-    <string name="aaa_focus">对焦距离</string>
-    <string name="aaa_ev">曝光补偿</string>
-    <string name="aaa_iso">ISO</string>
-    <string name="aaa_shutter">快门</string>
-    <string name="aaa_wb">白平衡</string>
-    <string name="aaa_auto">A</string>
-    <string name="aaa_manual">M</string>
+    <string name="camera_3a_focus">对焦距离</string>
+    <string name="camera_3a_ev">曝光补偿</string>
+    <string name="camera_3a_iso">ISO</string>
+    <string name="camera_3a_shutter">快门</string>
+    <string name="camera_3a_wb">白平衡</string>
+    <string name="camera_3a_auto">A</string>
+    <string name="camera_3a_manual">M</string>
     <string name="settings_camera_id">当前摄像头ID</string>
     <string name="settings_camera_none">无可用摄像头</string>
     <string name="settings_preview_resolution">预览分辨率</string>
@@ -47,4 +47,6 @@
     <string name="switch_camera">切换前后摄像头</string>
     <string name="preview_fps_hud_format">预览帧率 %1$.1f fps</string>
     <string name="preview_fps_hud_unknown">预览帧率 —</string>
+    <string name="camera_3a_hud_format">对焦 %1$s\nEV %2$s\nISO %3$s\n快门 %4$s\n白平衡 %5$s</string>
+    <string name="camera_3a_hud_unknown">对焦 —\nEV —\nISO —\n快门 —\n白平衡 —</string>
 </resources>

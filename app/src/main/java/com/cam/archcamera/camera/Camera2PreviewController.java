@@ -38,6 +38,12 @@ public final class Camera2PreviewController {
     private static final String TAG = "Camera2Preview";
     private static final int PREVIEW_READER_MAX_IMAGES = 8;
     private static final int STILL_READER_MAX_IMAGES = 2;
+    private static final long CAMERA_3A_DEBOUNCE_MS = 50L;
+    private static final long PREVIEW_3A_MIN_INTERVAL_NS = 100_000_000L;
+
+    public interface Preview3AListener {
+        void onPreview3AUpdated(@NonNull Camera3ADisplayValues values);
+    }
 
     public interface StillCaptureCallback {
         void onSuccess(@NonNull Uri uri);
@@ -70,8 +76,104 @@ public final class Camera2PreviewController {
     @Nullable private byte[] pendingJpeg;
     @Nullable private TotalCaptureResult pendingCaptureResult;
 
+    @NonNull private Camera3ASettings camera3aSettings = Camera3ASettings.autoDefaults();
+    private boolean professionalMode;
+    @Nullable private Camera3ACapabilities capabilities;
+    @Nullable private Preview3AListener preview3aListener;
+
+    @Nullable private Camera3ADisplayValues lastPosted3a;
+    private long lastPosted3aNs;
+
+    private final CameraCaptureSession.CaptureCallback previewCaptureCallback =
+            new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(
+                        @NonNull CameraCaptureSession session,
+                        @NonNull CaptureRequest request,
+                        @NonNull TotalCaptureResult result) {
+                    deliverPreview3AIfNeeded(result);
+                }
+            };
+
+    private final Runnable updateRepeatingRunnable = this::updateRepeatingRequestNow;
+
     public boolean isStarting() {
         return starting.get();
+    }
+
+    public void setCamera3ACapabilities(@Nullable Camera3ACapabilities caps) {
+        capabilities = caps;
+    }
+
+    public void setPreview3AListener(@Nullable Preview3AListener listener) {
+        preview3aListener = listener;
+    }
+
+    public void setCamera3A(@NonNull Camera3ASettings settings, boolean professionalMode) {
+        this.camera3aSettings = Camera3ASettings.copyOf(settings);
+        this.professionalMode = professionalMode;
+        scheduleUpdateRepeatingRequest();
+    }
+
+    private void scheduleUpdateRepeatingRequest() {
+        Handler handler = cameraHandler;
+        if (handler == null) {
+            return;
+        }
+        handler.removeCallbacks(updateRepeatingRunnable);
+        handler.postDelayed(updateRepeatingRunnable, CAMERA_3A_DEBOUNCE_MS);
+    }
+
+    private void updateRepeatingRequestNow() {
+        CameraCaptureSession session = captureSession;
+        CameraDevice device = cameraDevice;
+        ImageReader previewReader = previewImageReader;
+        Handler handler = cameraHandler;
+        if (session == null || device == null || previewReader == null || handler == null || !open.get()) {
+            return;
+        }
+        try {
+            CaptureRequest.Builder builder = buildPreviewRequest(device, previewReader.getSurface());
+            session.setRepeatingRequest(builder.build(), previewCaptureCallback, handler);
+        } catch (CameraAccessException | IllegalStateException e) {
+            Log.e(TAG, "updateRepeatingRequest failed", e);
+        }
+    }
+
+    private void deliverPreview3AIfNeeded(@NonNull TotalCaptureResult result) {
+        Preview3AListener listener = preview3aListener;
+        if (listener == null) {
+            return;
+        }
+        Camera3ADisplayValues parsed = Camera3AResultParser.parse(result, capabilities);
+        Camera3ADisplayValues last = lastPosted3a;
+        if (!parsed.changedMeaningfully(last)) {
+            return;
+        }
+        long now = System.nanoTime();
+        if (last != null && now - lastPosted3aNs < PREVIEW_3A_MIN_INTERVAL_NS) {
+            return;
+        }
+        lastPosted3a = parsed;
+        lastPosted3aNs = now;
+        mainHandler.post(() -> {
+            Preview3AListener l = preview3aListener;
+            if (l != null && open.get()) {
+                l.onPreview3AUpdated(parsed);
+            }
+        });
+    }
+
+    @NonNull
+    private CaptureRequest.Builder buildPreviewRequest(
+            @NonNull CameraDevice device, @NonNull Surface previewSurface)
+            throws CameraAccessException {
+        CaptureRequest.Builder builder =
+                device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+        builder.addTarget(previewSurface);
+        Camera3ARequestMapper.apply(builder, camera3aSettings, capabilities, professionalMode);
+        applyPreviewTargetFps(builder);
+        return builder;
     }
 
     public void start(
@@ -195,13 +297,9 @@ public final class Camera2PreviewController {
                             captureSession = session;
                             try {
                                 CaptureRequest.Builder builder =
-                                        device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                                builder.addTarget(previewSurface);
-                                builder.set(
-                                        CaptureRequest.CONTROL_MODE,
-                                        CaptureRequest.CONTROL_MODE_AUTO);
-                                applyPreviewTargetFps(builder);
-                                session.setRepeatingRequest(builder.build(), null, handler);
+                                        buildPreviewRequest(device, previewSurface);
+                                session.setRepeatingRequest(
+                                        builder.build(), previewCaptureCallback, handler);
                                 open.set(true);
                                 starting.set(false);
                                 PreviewFrameSink streamingSink = activeSink;
@@ -273,8 +371,8 @@ public final class Camera2PreviewController {
                         CaptureRequest.Builder stillBuilder =
                                 device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
                         stillBuilder.addTarget(stillReader.getSurface());
-                        stillBuilder.set(
-                                CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+                        Camera3ARequestMapper.apply(
+                                stillBuilder, camera3aSettings, capabilities, professionalMode);
                         stillBuilder.set(
                                 CaptureRequest.JPEG_ORIENTATION,
                                 JpegOrientationHelper.computeJpegOrientation(context, cameraId));
@@ -396,6 +494,8 @@ public final class Camera2PreviewController {
         pendingJpeg = null;
         pendingCaptureResult = null;
         pendingCaptureCallback = null;
+        lastPosted3a = null;
+        lastPosted3aNs = 0L;
         stopInternal();
     }
 

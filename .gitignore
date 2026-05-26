@@ -3,6 +3,7 @@
 build/
 
 # Android Studio / IntelliJ IDEA
+.cursor/
 .idea/
 *.iml
 

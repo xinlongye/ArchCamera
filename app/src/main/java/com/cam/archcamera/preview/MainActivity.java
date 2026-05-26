@@ -10,12 +10,10 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Size;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
-import android.widget.SeekBar;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -29,9 +27,11 @@ import com.cam.archcamera.R;
 import com.cam.archcamera.camera.AspectResolutionSelector;
 import com.cam.archcamera.camera.Camera2Enum;
 import com.cam.archcamera.camera.Camera2PreviewController;
+import com.cam.archcamera.camera.Camera3ACapabilities;
+import com.cam.archcamera.camera.Camera3ADisplayValues;
+import com.cam.archcamera.camera.Camera3ASettings;
 import com.cam.archcamera.camera.PreviewStreamSizeResolver;
 import com.cam.archcamera.databinding.ActivityMainBinding;
-import com.cam.archcamera.databinding.ItemAaaRowBinding;
 import com.cam.archcamera.gallery.GalleryActivity;
 import com.cam.archcamera.gallery.GalleryItem;
 import com.cam.archcamera.gallery.GalleryMediaRepository;
@@ -56,11 +56,6 @@ public class MainActivity extends AppCompatActivity {
         FULL
     }
 
-    private static final String[] SHUTTER_STOPS = {
-        "1/8000", "1/4000", "1/2000", "1/1000", "1/500", "1/250", "1/125", "1/60",
-        "1/30", "1/15", "1/8", "1/4", "1/2", "1\"", "2\"", "4\"", "8\"", "15\"", "30\"", "B"
-    };
-
     /** 策略 key 中显示区总像素的量化步长，减轻 1px 抖动导致的 prefs 重算。 */
     private static final long RESOLUTION_POLICY_DISPLAY_PIXEL_BUCKET = 50_000L;
 
@@ -69,6 +64,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
     private final Camera2PreviewController previewController = new Camera2PreviewController();
+    private Camera3APanelController camera3aPanelController;
+    @Nullable private Camera3ADisplayValues lastLive3a;
     private PreviewAspect aspect = PreviewAspect.THREE_FOUR;
     private boolean backCamera = true;
 
@@ -114,7 +111,22 @@ public class MainActivity extends AppCompatActivity {
 
         WindowInsetsHelper.padTopBarForStatusBar(this, binding.topBar);
 
-        populateAaaPanel();
+        camera3aPanelController =
+                new Camera3APanelController(
+                        binding.camera3aPanel,
+                        new Camera3APanelController.Listener() {
+                            @Override
+                            public void onSettingsChanged(@NonNull Camera3ASettings settings) {
+                                MainActivity.this.onCamera3AChanged(settings);
+                            }
+
+                            @Override
+                            public void onDisplayChanged() {
+                                MainActivity.this.refresh3aHud();
+                            }
+                        });
+        camera3aPanelController.setup();
+        previewController.setPreview3AListener(this::onPreview3AUpdated);
 
         binding.cameraStage.addOnLayoutChangeListener(
                 (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
@@ -184,11 +196,55 @@ public class MainActivity extends AppCompatActivity {
         binding.previewFpsHudText.setText(R.string.preview_fps_hud_unknown);
     }
 
+    private void reset3aHud() {
+        lastLive3a = null;
+        binding.camera3aHudText.setText(R.string.camera_3a_hud_unknown);
+    }
+
+    private void onPreview3AUpdated(@NonNull Camera3ADisplayValues live) {
+        lastLive3a = live;
+        if (isProfessionalMode()) {
+            camera3aPanelController.syncAutoRowsFromLive(live);
+        }
+        refresh3aHud();
+    }
+
+    private void refresh3aHud() {
+        Camera3ADisplayValues live = lastLive3a;
+        if (live == null) {
+            if (isProfessionalMode()) {
+                binding.camera3aHudText.setText(
+                        camera3aPanelController.buildDisplayValuesFromUi().formatHudLines(this));
+            } else {
+                binding.camera3aHudText.setText(R.string.camera_3a_hud_unknown);
+            }
+            return;
+        }
+        Camera3ADisplayValues display;
+        if (isProfessionalMode()) {
+            Camera3ASettings s = camera3aPanelController.getSettings();
+            Camera3ADisplayValues panel = camera3aPanelController.buildDisplayValuesFromUi();
+            display =
+                    live.merge(
+                            panel,
+                            s.focusManual,
+                            s.evManual,
+                            s.isoManual,
+                            s.shutterManual,
+                            s.wbManual,
+                            true);
+        } else {
+            display = live;
+        }
+        binding.camera3aHudText.setText(display.formatHudLines(this));
+    }
+
     @Override
     protected void onPause() {
         previewController.stop();
         binding.previewGl.onPause();
         resetPreviewFpsHud();
+        reset3aHud();
         super.onPause();
     }
 
@@ -240,12 +296,34 @@ public class MainActivity extends AppCompatActivity {
             applyPreviewStreamSizeFromPrefsOnly();
             return;
         }
+        bindCamera3ACapabilities(camId);
         Size labelSize =
                 PreviewSizeLabel.parseOrFallback(PhotoSavePrefs.getPreviewSizeLabel(this));
         Size streamSize = PreviewStreamSizeResolver.resolve(this, camId, labelSize);
         binding.previewGl.invalidatePreviewFrames();
         binding.previewGl.setPreviewSize(streamSize.getWidth(), streamSize.getHeight());
         previewController.start(this, camId, streamSize, binding.previewGl.getFrameSink());
+        applyCamera3AToController();
+    }
+
+    private void bindCamera3ACapabilities(@NonNull String cameraId) {
+        Camera3ACapabilities caps = Camera3ACapabilities.tryFrom(this, cameraId);
+        previewController.setCamera3ACapabilities(caps);
+        camera3aPanelController.bindCapabilities(caps);
+    }
+
+    private void onCamera3AChanged(@NonNull Camera3ASettings settings) {
+        applyCamera3AToController();
+        refresh3aHud();
+    }
+
+    private boolean isProfessionalMode() {
+        return binding.modeGroup.getCheckedButtonId() == R.id.mode_pro;
+    }
+
+    private void applyCamera3AToController() {
+        previewController.setCamera3A(
+                camera3aPanelController.getSettings(), isProfessionalMode());
     }
 
     /** Updates GL buffers when camera is not running (no permission / no device). */
@@ -390,12 +468,17 @@ public class MainActivity extends AppCompatActivity {
             binding.modeGroup.check(R.id.mode_normal);
         }
 
-        boolean pro = binding.modeGroup.getCheckedButtonId() == R.id.mode_pro;
+        boolean pro = isProfessionalMode();
 
-        binding.sectionAaa.setVisibility(pro ? View.VISIBLE : View.GONE);
+        binding.sectionCamera3a.setVisibility(pro ? View.VISIBLE : View.GONE);
         binding.modePro.setEnabled(backCamera);
         binding.btnFlipCamera.setEnabled(!pro);
         binding.focalScroll.setVisibility(backCamera ? View.VISIBLE : View.GONE);
+
+        if (!pro) {
+            camera3aPanelController.resetToAutoDefaults();
+        }
+        applyCamera3AToController();
     }
 
     private void restoreAspectFromPrefs() {
@@ -716,165 +799,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void populateAaaPanel() {
-        binding.aaaPanel.removeAllViews();
-        LayoutInflater inflater = LayoutInflater.from(this);
-
-        addFocusRow(inflater);
-        addEvRow(inflater);
-        addIsoRow(inflater);
-        addShutterRow(inflater);
-        addWbRow(inflater);
-    }
-
-    private void addFocusRow(@NonNull LayoutInflater inflater) {
-        ItemAaaRowBinding row = ItemAaaRowBinding.inflate(inflater, binding.aaaPanel, false);
-        row.aaaName.setText(R.string.aaa_focus);
-        row.aaaSeek.setMax(100);
-        row.aaaSeek.setProgress(50);
-        row.aaaValue.setText(String.valueOf(50));
-        wireAmToggle(row);
-        row.aaaSeek.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        row.aaaValue.setText(String.valueOf(progress));
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {}
-                });
-        binding.aaaPanel.addView(row.getRoot());
-    }
-
-    private void addEvRow(@NonNull LayoutInflater inflater) {
-        ItemAaaRowBinding row = ItemAaaRowBinding.inflate(inflater, binding.aaaPanel, false);
-        row.aaaName.setText(R.string.aaa_ev);
-        row.aaaSeek.setMax(60);
-        row.aaaSeek.setProgress(30);
-        row.aaaValue.setText(formatEv(evFromProgress(row.aaaSeek.getProgress())));
-        wireAmToggle(row);
-        row.aaaSeek.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        row.aaaValue.setText(formatEv(evFromProgress(progress)));
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {}
-                });
-        binding.aaaPanel.addView(row.getRoot());
-    }
-
-    private static float evFromProgress(int progress) {
-        return -3f + progress * 0.1f;
-    }
-
-    private static String formatEv(float ev) {
-        return String.format(java.util.Locale.US, "%.1f EV", ev);
-    }
-
-    private void addIsoRow(@NonNull LayoutInflater inflater) {
-        ItemAaaRowBinding row = ItemAaaRowBinding.inflate(inflater, binding.aaaPanel, false);
-        row.aaaName.setText(R.string.aaa_iso);
-        int maxSteps = (6400 - 50) / 50;
-        row.aaaSeek.setMax(maxSteps);
-        row.aaaSeek.setProgress((400 - 50) / 50);
-        row.aaaValue.setText(String.valueOf(isoFromProgress(row.aaaSeek.getProgress())));
-        wireAmToggle(row);
-        row.aaaSeek.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        row.aaaValue.setText(String.valueOf(isoFromProgress(progress)));
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {}
-                });
-        binding.aaaPanel.addView(row.getRoot());
-    }
-
-    private static int isoFromProgress(int progress) {
-        return 50 + progress * 50;
-    }
-
-    private void addShutterRow(@NonNull LayoutInflater inflater) {
-        ItemAaaRowBinding row = ItemAaaRowBinding.inflate(inflater, binding.aaaPanel, false);
-        row.aaaName.setText(R.string.aaa_shutter);
-        row.aaaSeek.setMax(SHUTTER_STOPS.length - 1);
-        row.aaaSeek.setProgress(12);
-        row.aaaValue.setText(shutterLabel(row.aaaSeek.getProgress()));
-        wireAmToggle(row);
-        row.aaaSeek.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        row.aaaValue.setText(shutterLabel(progress));
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {}
-                });
-        binding.aaaPanel.addView(row.getRoot());
-    }
-
-    private String shutterLabel(int idx) {
-        int i = Math.max(0, Math.min(idx, SHUTTER_STOPS.length - 1));
-        return SHUTTER_STOPS[i] + "s";
-    }
-
-    private void addWbRow(@NonNull LayoutInflater inflater) {
-        ItemAaaRowBinding row = ItemAaaRowBinding.inflate(inflater, binding.aaaPanel, false);
-        row.aaaName.setText(R.string.aaa_wb);
-        int maxSteps = (10000 - 2000) / 100;
-        row.aaaSeek.setMax(maxSteps);
-        row.aaaSeek.setProgress((5200 - 2000) / 100);
-        row.aaaValue.setText(wbFromProgress(row.aaaSeek.getProgress()) + " K");
-        wireAmToggle(row);
-        row.aaaSeek.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        row.aaaValue.setText(wbFromProgress(progress) + " K");
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {}
-                });
-        binding.aaaPanel.addView(row.getRoot());
-    }
-
-    private static int wbFromProgress(int progress) {
-        return 2000 + progress * 100;
-    }
-
-    private void wireAmToggle(ItemAaaRowBinding row) {
-        MaterialButton am = row.aaaAm;
-        row.aaaSeek.setEnabled(false);
-        am.setText(R.string.aaa_auto);
-        am.setOnClickListener(
-                v -> {
-                    boolean manual = row.aaaSeek.isEnabled();
-                    manual = !manual;
-                    row.aaaSeek.setEnabled(manual);
-                    am.setText(manual ? R.string.aaa_manual : R.string.aaa_auto);
-                });
-    }
 }

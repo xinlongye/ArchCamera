@@ -2,6 +2,24 @@
 
 版本号与 `version.properties` 保持一致；发布前请同步更新本文件。
 
+## [1.1.3] - 2026-05-26
+
+### 新增
+
+- 专业模式 `camera_3a` 面板：对焦距离、曝光补偿、ISO、快门、白平衡各行支持 A/M 切换与滑块调节
+- `Camera3ASettings`、`Camera3ARequestMapper`、`Camera3AResultParser` 等：3A 参数映射、能力探测与 CaptureResult 解析
+- 预览 HUD 显示当前 3A 读数（对焦、EV、ISO、快门、白平衡）
+- `Camera3APanelController`：面板 UI 与 Camera2 重复请求联动
+
+### 改进
+
+- 3A 相关命名统一为 `camera_3a`（布局、字符串、文档）
+- `preview_renderer.h` 移至 `app/src/main/cpp/include/`
+
+### 已知问题
+
+- 专业模式下手动白平衡预览画面显示异常，待后续更新修复
+
 ## [1.1.2] - 2026-05-24
 
 ### 新增
