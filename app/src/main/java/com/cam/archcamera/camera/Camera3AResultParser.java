@@ -50,6 +50,7 @@ public final class Camera3AResultParser {
         }
 
         int wbK = Camera3ADisplayValues.UNKNOWN_WB_K;
+        Camera3ADisplayValues.WbSource wbSource = Camera3ADisplayValues.WbSource.NONE;
         if (Build.VERSION.SDK_INT >= 36) {
             Integer cct = result.get(CaptureResult.COLOR_CORRECTION_COLOR_TEMPERATURE);
             if (cct != null && cct >= 2000) {
@@ -59,13 +60,15 @@ public final class Camera3AResultParser {
         if (wbK <= 0) {
             RggbChannelVector gains = result.get(CaptureResult.COLOR_CORRECTION_GAINS);
             if (gains != null) {
-                Integer estimated = ColorTemperatureMapper.estimateKelvinFromGains(gains);
+                ColorTemperatureMapper.EstimatedKelvin estimated =
+                        ColorTemperatureMapper.estimateKelvinFromGains(gains, c.dngWbModel);
                 if (estimated != null) {
-                    wbK = estimated;
+                    wbK = estimated.kelvin;
+                    wbSource = estimated.source;
                 }
             }
         }
 
-        return new Camera3ADisplayValues(focusProgress, ev, iso, shutterIndex, wbK);
+        return new Camera3ADisplayValues(focusProgress, ev, iso, shutterIndex, wbK, wbSource);
     }
 }

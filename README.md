@@ -2,7 +2,7 @@
 
 基于 Android Camera2 API 的相机应用，面向多种机型提供兼容的权限申请、预览、拍照、图库与设置能力。
 
-**当前版本：1.1.3**（`versionCode` 5）— 详见 [`CHANGELOG.md`](CHANGELOG.md)
+**当前版本：1.1.4**（`versionCode` 5）— 详见 [`CHANGELOG.md`](CHANGELOG.md)
 
 ## 功能概览
 
@@ -23,12 +23,13 @@
 - **分辨率 HUD**（v1.1.1+）：切换前后摄时即时更新预览/拍照分辨率与显示区像素；与设置页、比例策略联动
 - **拍照**（v1.1.2+）：同一会话内 JPEG 静态抓拍，按设置路径保存并写入 EXIF；前摄可镜像保存；快门完成后刷新底部图库缩略图
 - **专业 3A**（v1.1.3+）：`camera_3a` 面板绑定 Camera2 请求，支持对焦/EV/ISO/快门/白平衡 A/M 切换；预览 HUD 实时显示当前 3A 读数
+- **手动白平衡修正**（v1.1.4+）：优先使用 DNG 静态元数据矩阵计算 `COLOR_CORRECTION_GAINS`，缺失时自动回退到原有估算；HUD 白平衡支持显示估算来源（DNG / fallback）
 
 更完整的功能与交互说明见 [`docs/功能描述.md`](docs/功能描述.md)。
 
 ## 已知问题
 
-- **专业模式手动白平衡预览异常**：专业模式下将白平衡切换为手动（M）并调节色温时，预览画面可能出现偏色或显示与预期不一致的情况；拍照结果与预览可能不同步。该问题已知，待后续版本修复。
+- 暂无本版本新增的已知问题；历史问题以 [`CHANGELOG.md`](CHANGELOG.md) 为准。
 
 ## 技术栈
 
@@ -44,7 +45,7 @@
 
 ```properties
 VERSION_CODE=5
-VERSION_NAME=1.1.3
+VERSION_NAME=1.1.4
 ```
 
 `app/build.gradle` 读取该文件作为 `versionCode` / `versionName`。发版时请同时更新 `CHANGELOG.md`。

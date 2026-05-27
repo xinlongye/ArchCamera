@@ -16,11 +16,18 @@ public final class Camera3ADisplayValues {
     public static final int UNKNOWN_SHUTTER_INDEX = -1;
     public static final int UNKNOWN_WB_K = -1;
 
+    public enum WbSource {
+        NONE,
+        DNG,
+        FALLBACK
+    }
+
     public final int focusProgress;
     public final float ev;
     public final int iso;
     public final int shutterIndex;
     public final int colorTemperatureK;
+    @NonNull public final WbSource wbSource;
 
     public Camera3ADisplayValues(
             int focusProgress,
@@ -28,11 +35,22 @@ public final class Camera3ADisplayValues {
             int iso,
             int shutterIndex,
             int colorTemperatureK) {
+        this(focusProgress, ev, iso, shutterIndex, colorTemperatureK, WbSource.NONE);
+    }
+
+    public Camera3ADisplayValues(
+            int focusProgress,
+            float ev,
+            int iso,
+            int shutterIndex,
+            int colorTemperatureK,
+            @NonNull WbSource wbSource) {
         this.focusProgress = focusProgress;
         this.ev = ev;
         this.iso = iso;
         this.shutterIndex = shutterIndex;
         this.colorTemperatureK = colorTemperatureK;
+        this.wbSource = wbSource;
     }
 
     public boolean isComplete() {
@@ -71,6 +89,9 @@ public final class Camera3ADisplayValues {
                 && Math.abs(colorTemperatureK - other.colorTemperatureK) >= 100) {
             return true;
         }
+        if (wbSource != other.wbSource) {
+            return true;
+        }
         return false;
     }
 
@@ -93,7 +114,8 @@ public final class Camera3ADisplayValues {
                 proShutterManual && panel.shutterIndex >= 0 ? panel.shutterIndex : shutterIndex,
                 proWbManual && panel.colorTemperatureK > 0
                         ? panel.colorTemperatureK
-                        : colorTemperatureK);
+                        : colorTemperatureK,
+                proWbManual ? panel.wbSource : wbSource);
     }
 
     @NonNull
@@ -104,6 +126,6 @@ public final class Camera3ADisplayValues {
                 Camera3AFormatters.formatEv(ev),
                 Camera3AFormatters.formatIso(iso),
                 Camera3AFormatters.formatShutter(shutterIndex),
-                Camera3AFormatters.formatWb(colorTemperatureK));
+                Camera3AFormatters.formatWb(colorTemperatureK, wbSource));
     }
 }

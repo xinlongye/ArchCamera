@@ -2,6 +2,18 @@
 
 版本号与 `version.properties` 保持一致；发布前请同步更新本文件。
 
+## [1.1.4] - 2026-05-27
+
+### 修复
+
+- 专业模式手动白平衡映射：`Camera3ARequestMapper` 接入 `DngWbModel`，优先基于 DNG 静态元数据矩阵计算 `COLOR_CORRECTION_GAINS`，降低预览偏色与色温映射不一致问题
+
+### 改进
+
+- 新增 `DngWbModel`：支持从 `SENSOR_FORWARD_MATRIX*`、`SENSOR_COLOR_TRANSFORM*`、`SENSOR_CALIBRATION_TRANSFORM*` 推导白平衡增益，并在缺少元数据时回退既有 Kelvin 估算链路
+- `Camera3AResultParser` / `Camera3ADisplayValues` / `Camera3AFormatters` 新增白平衡来源标识（`DNG` / `FALLBACK`），HUD 可区分估算来源
+- `Camera3ACapabilities` 增加 DNG 白平衡能力模型挂载，能力探测与请求映射链路打通
+
 ## [1.1.3] - 2026-05-26
 
 ### 新增

@@ -102,7 +102,7 @@ public final class Camera3ARequestMapper {
             @NonNull Camera3ASettings settings,
             @NonNull Camera3ACapabilities caps) {
         if (settings.wbManual && caps.canManualWb()) {
-            ColorTemperatureMapper.applyManualWb(builder, settings.colorTemperatureK);
+            ColorTemperatureMapper.applyManualWb(builder, settings.colorTemperatureK, caps.dngWbModel);
         } else {
             builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO);
         }

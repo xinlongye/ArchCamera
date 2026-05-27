@@ -21,6 +21,7 @@ public final class Camera3ACapabilities {
     public final float minimumFocusDistance;
     public final boolean manualFocusSupported;
     public final boolean manualWbSupported;
+    @Nullable public final DngWbModel dngWbModel;
     public final int isoStep;
     public final int evSeekMax;
     public final int isoSeekMax;
@@ -33,7 +34,8 @@ public final class Camera3ACapabilities {
             @NonNull Range<Long> exposureTimeRange,
             float minimumFocusDistance,
             boolean manualFocusSupported,
-            boolean manualWbSupported) {
+            boolean manualWbSupported,
+            @Nullable DngWbModel dngWbModel) {
         this.aeCompensationRange = aeCompensationRange;
         this.aeCompensationStep = aeCompensationStep;
         this.isoRange = isoRange;
@@ -41,6 +43,7 @@ public final class Camera3ACapabilities {
         this.minimumFocusDistance = minimumFocusDistance;
         this.manualFocusSupported = manualFocusSupported;
         this.manualWbSupported = manualWbSupported;
+        this.dngWbModel = dngWbModel;
 
         float stepEv = aeCompensationStep.floatValue();
         int evSteps =
@@ -103,7 +106,7 @@ public final class Camera3ACapabilities {
                         && contains(awbModes, CaptureRequest.CONTROL_AWB_MODE_OFF);
 
         return new Camera3ACapabilities(
-                aeRange, aeStep, iso, exposure, minFocusDist, manualAf, manualWb);
+                aeRange, aeStep, iso, exposure, minFocusDist, manualAf, manualWb, DngWbModel.tryFrom(chars));
     }
 
     @NonNull
@@ -115,7 +118,8 @@ public final class Camera3ACapabilities {
                 new Range<>(125_000L, 30_000_000_000L),
                 0f,
                 false,
-                false);
+                false,
+                null);
     }
 
     @Nullable
